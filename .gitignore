@@ -1,0 +1,12 @@
+.env
+env
+venv
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/

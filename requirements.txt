@@ -1,0 +1,8 @@
+langgraph
+langchain-core
+langchain-openai
+pydantic
+GitPython
+PyGithub
+python-dotenv
+langchain-google-genai

@@ -1,0 +1,19 @@
+[project]
+name = "git-ai-agent"
+version = "0.1.0"
+description = "An AI-powered Git assistant using LangGraph."
+authors = [{ name = "Pedro Castanheira", email = "pedrocastanhacosta1945@gmail.com" }]
+dependencies = [
+    "gitpython>=3.1.40",
+    "langgraph>=0.0.20",
+    "langchain>=0.1.0",
+    "langchain-anthropic>=0.1.0",
+    "langchain-openai>=0.0.5",
+    "langchain-google-genai>=0.0.5",
+    "langchain-community>=0.0.10",
+    "pydantic>=2.0.0",
+]
+requires-python = ">=3.9"
+
+[project.scripts]
+castanhafodao = "main:main"

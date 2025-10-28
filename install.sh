@@ -12,6 +12,22 @@ BLUE3='\033[38;5;21m'
 WHITE='\033[1;37m'
 NC='\033[0m'
 
+print_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+print_info() {
+    echo "ℹ️  $1"
+}
+
 clear
 echo ""
 echo ""
@@ -44,22 +60,6 @@ print_success "Arquivos do projeto copiados."
 print_info "Mudando para o diretório de instalação para continuar..."
 cd "$APP_HOME_DIR"
 echo ""
-
-print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
-
-print_info() {
-    echo "ℹ️  $1"
-}
 
 if [ ! -d ".git" ]; then
     print_error "Este diretório não é um repositório Git!"

@@ -56,7 +56,6 @@ PYTHON_CMD=""
 if command -v python3 &> /dev/null; then
     PYTHON_CMD="python3"
 elif command -v python &> /dev/null; then
-    # Check if python is Python 3
     if python -c 'import sys; sys.exit(0 if sys.version_info.major == 3 else 1)' &> /dev/null; then
         PYTHON_CMD="python"
     fi

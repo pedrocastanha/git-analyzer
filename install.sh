@@ -30,6 +30,21 @@ sleep 0.3
 echo "🚀 Instalando Git AI Agent (Castanha Fodão)..."
 echo "============================================================"
 
+
+APP_HOME_DIR="$HOME/.local/share/git-analyzer"
+
+print_info "Garantindo que o diretório de instalação permanente exista em '$APP_HOME_DIR'..."
+mkdir -p "$APP_HOME_DIR"
+print_success "Diretório de instalação pronto."
+
+print_info "Copiando arquivos do projeto para o diretório de instalação..."
+rsync -a --delete . "$APP_HOME_DIR/" --exclude ".git" --exclude ".idea" --exclude "checkpointer.sqlite"
+print_success "Arquivos do projeto copiados."
+
+print_info "Mudando para o diretório de instalação para continuar..."
+cd "$APP_HOME_DIR"
+echo ""
+
 print_success() {
     echo -e "${GREEN}✅ $1${NC}"
 }
@@ -86,25 +101,29 @@ pip install --upgrade pip
 print_success "Pip atualizado."
 
 echo ""
-print_info "Instalando Git AI Agent e suas dependências..."
-pip install -e .
 
-print_success "Git AI Agent instalado em modo editável no ambiente virtual!"
+print_info "Instalando Git AI Agent e suas dependências no ambiente virtual..."
+pip install .
+
+print_success "Git AI Agent instalado com sucesso no ambiente virtual!"
 
 echo ""
-if [ -f ".gitignore" ]; then
-    if ! grep -q ".castanhafodao.json" .gitignore; then
-        echo ".castanhafodao.json" >> .gitignore
-        print_success "Adicionado .castanhafodao.json ao .gitignore"
-    fi
-    if ! grep -q "user_config.json" .gitignore; then
-        echo "user_config.json" >> .gitignore
-        print_success "Adicionado user_config.json ao .gitignore"
-    fi
+
+print_info "Criando link simbólico para acesso global ao comando 'castanhafodao'..."
+
+EXECUTABLE_PATH="$APP_HOME_DIR/.venv/bin/castanhafodao"
+SYMLINK_PATH="/usr/local/bin/castanhafodao"
+
+if [ -L "$SYMLINK_PATH" ] && [ "$(readlink "$SYMLINK_PATH")" = "$EXECUTABLE_PATH" ]; then
+    print_success "Link simbólico global já existe e está correto."
 else
-    echo ".castanhafodao.json" > .gitignore
-    echo "user_config.json" >> .gitignore
-    print_success "Criado .gitignore com .castanhafodao.json e user_config.json"
+    print_info "Será necessário privilégio de administrador (sudo) para criar o link em /usr/local/bin."
+    if sudo ln -sf "$EXECUTABLE_PATH" "$SYMLINK_PATH"; then
+        print_success "Link simbólico criado com sucesso!"
+    else
+        print_error "Falha ao criar o link simbólico. A instalação pode não estar acessível globalmente."
+        exit 1
+    fi
 fi
 
 echo ""

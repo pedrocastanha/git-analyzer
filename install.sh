@@ -61,11 +61,9 @@ print_info "Mudando para o diretório de instalação para continuar..."
 cd "$APP_HOME_DIR"
 echo ""
 
-if [ ! -d ".git" ]; then
-    print_error "Este diretório não é um repositório Git!"
-    print_info "Execute 'git init' primeiro ou clone um repositório."
-    exit 1
-fi
+# A verificação de repositório Git foi removida daqui.
+# O instalador não precisa mais rodar de dentro de um repositório.
+# A ferramenta em si, quando executada, fará as checagens necessárias.
 
 PYTHON_CMD=""
 if command -v python3 &> /dev/null; then

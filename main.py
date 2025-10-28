@@ -3,7 +3,8 @@ import sys
 import git
 
 from src.config import ConfigManager
-from src.core.graph import create_analysis_graph, create_commit_graph
+from src.core.graph import create_graph
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 
 class GitAIAgent:
@@ -11,8 +12,8 @@ class GitAIAgent:
         self.repo_path = repo_path
         self.config_manager = ConfigManager(repo_path)
 
-        self.analysis_graph = create_analysis_graph()
-        self.commit_graph = create_commit_graph()
+        checkpointer = SqliteSaver.from_conn_string("checkpointer.sqlite")
+        self.graph = create_graph(checkpointer)
 
         self.active = True
 
@@ -37,7 +38,7 @@ class GitAIAgent:
 
         config = {"configurable": {"thread_id": "analyze_thread"}}
 
-        result = await self.analysis_graph.invoke(initial_state, config)
+        result = await self.graph.invoke(initial_state, config)
 
         if result.get('error'):
             print(f"\n{result['error']}")
@@ -54,7 +55,7 @@ class GitAIAgent:
         result['user_confirmation'] = (choice == 's')
 
         if result['user_confirmation']:
-            result = await self.analysis_graph.invoke(result, config)
+            result = await self.graph.invoke(result, config)
 
             if result.get('patch'):
                 print("\nPatch gerado:\n")
@@ -64,7 +65,7 @@ class GitAIAgent:
                 result['user_confirmation'] = (apply == 's')
 
                 if result['user_confirmation']:
-                    await self.analysis_graph.invoke(result, config)
+                    await self.graph.invoke(result, config)
             else:
                 print("\n✅ Nenhuma melhoria automática necessária.")
 
@@ -88,7 +89,7 @@ class GitAIAgent:
 
         config = {"configurable": {"thread_id": "commit_thread"}}
 
-        result = await self.commit_graph.invoke(initial_state, config)
+        result = await self.graph.invoke(initial_state, config)
 
         if result.get('error'):
             print(f"\n{result['error']}")
@@ -100,7 +101,7 @@ class GitAIAgent:
         result['user_confirmation'] = (confirm == 's')
 
         if result['user_confirmation']:
-            await self.commit_graph.invoke(result, config)
+            await self.graph.invoke(result, config)
 
     def configure(self):
         """Menu de configuração"""

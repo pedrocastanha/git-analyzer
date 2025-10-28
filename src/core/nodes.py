@@ -63,7 +63,7 @@ async def analyze_code_node(state: GraphState) -> GraphState:
         response = await llm.ainvoke(messages)
         return {
             "analysis": response.content,
-            "messages": [AIMessage(content=response.content)]
+            "messages": messages + [AIMessage(content=response.content)]
         }
     except Exception as e:
         return {"analysis": None, "error": f"Erro na análise do código: {str(e)}"}
@@ -93,11 +93,11 @@ async def generate_improvements_node(state: GraphState) -> dict:
 
         messages = [HumanMessage(content=prompt)]
         response = await llm.ainvoke(messages)
-
+        new_messages = messages + [AIMessage(content=response.content)]
         if "NO_CHANGES_NEEDED" in response.content:
-            return {'patch': None}
+            return {'patch': None, "messages": new_messages}
         else:
-            return {'patch': response.content}
+            return {'patch': response.content, "messages": new_messages}
     except Exception as e:
         return {'patch': None, 'error': f"Erro ao gerar o patch: {str(e)}"}
 
@@ -129,7 +129,8 @@ async def generate_commit_message_node(state: GraphState) -> dict:
 
         messages = [HumanMessage(content=prompt)]
         response = await llm.ainvoke(messages)
-        return {'commit_message': response.content.strip()}
+        new_messages = messages + [AIMessage(content=response.content)]
+        return {'commit_message': response.content.strip(), "messages": new_messages}
 
     except Exception as e:
         return {'commit_message': None, 'error': f"Erro ao gerar commit: {e}"}

@@ -1,11 +1,8 @@
-from typing import Annotated, List
-import operator
-from langchain_core.messages import BaseMessage
-from pydantic import BaseModel
+from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
 
-
-class GraphState(BaseModel):
-    messages: Annotated[list[BaseMessage], operator.add]
+class GraphState(TypedDict):
+    messages: Annotated[list, add_messages]
     diff: str | None
     analysis: str | None
     commit_message: str | None

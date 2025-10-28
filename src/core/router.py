@@ -16,5 +16,4 @@ def route_after_diff(state: GraphState):
     elif current_action == "commit":
         return "generate_commit"
     else:
-        # Default or error case
         return "end"

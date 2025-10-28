@@ -13,7 +13,7 @@ class LLMProvider:
             api_key = config.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY')
             if not api_key:
                 raise ValueError("Gemini API key not found")
-            return ChatGoogleGenerativeAI(model = config.get('gemini_model', 'gemini-pro'), api_key=api_key)
+            return ChatGoogleGenerativeAI(model = config.get('gemini_model', 'gemini-2.5-flash'), api_key=api_key)
 
         elif provider == 'openai':
             api_key = config.get('openai_api_key') or os.getenv('OPENAI_API_KEY')

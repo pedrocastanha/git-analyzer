@@ -4,7 +4,6 @@ import git
 
 from src.config import ConfigManager
 from src.core.graph import create_graph
-from langgraph.checkpoint.sqlite import SqliteSaver
 
 
 class GitAIAgent:
@@ -12,8 +11,8 @@ class GitAIAgent:
         self.repo_path = repo_path
         self.config_manager = ConfigManager(repo_path)
 
-        checkpointer = SqliteSaver.from_conn_string("checkpointer.sqlite")
-        self.graph = create_graph(checkpointer)
+        workflow = create_graph()
+        self.graph = workflow.compile()
 
         self.active = True
 
@@ -36,9 +35,7 @@ class GitAIAgent:
             'config': self.config_manager.config
         }
 
-        config = {"configurable": {"thread_id": "analyze_thread"}}
-
-        result = await self.graph.invoke(initial_state, config)
+        result = await self.graph.ainvoke(initial_state)
 
         if result.get('error'):
             print(f"\n{result['error']}")
@@ -55,7 +52,7 @@ class GitAIAgent:
         result['user_confirmation'] = (choice == 's')
 
         if result['user_confirmation']:
-            result = await self.graph.invoke(result, config)
+            result = await self.graph.ainvoke(result)
 
             if result.get('patch'):
                 print("\nPatch gerado:\n")
@@ -65,7 +62,7 @@ class GitAIAgent:
                 result['user_confirmation'] = (apply == 's')
 
                 if result['user_confirmation']:
-                    await self.graph.invoke(result, config)
+                    await self.graph.ainvoke(result)
             else:
                 print("\n✅ Nenhuma melhoria automática necessária.")
 
@@ -87,9 +84,7 @@ class GitAIAgent:
             'config': self.config_manager.config
         }
 
-        config = {"configurable": {"thread_id": "commit_thread"}}
-
-        result = await self.graph.invoke(initial_state, config)
+        result = await self.graph.ainvoke(initial_state)
 
         if result.get('error'):
             print(f"\n{result['error']}")
@@ -101,7 +96,7 @@ class GitAIAgent:
         result['user_confirmation'] = (confirm == 's')
 
         if result['user_confirmation']:
-            await self.graph.invoke(result, config)
+            await self.graph.ainvoke(result)
 
     def configure(self):
         """Menu de configuração"""

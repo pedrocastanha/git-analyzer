@@ -13,7 +13,7 @@ class ConfigManager:
         'language': 'pt',
         'openai_api_key': '',
         'gemini_api_key': '',
-        'gemini_model': 'gemini-pro',
+        'gemini_model': 'gemini-2.5-flash',
         'openai_model': 'gpt-4o-mini'
     }
 

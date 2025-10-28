@@ -86,9 +86,14 @@ if [ -f ".gitignore" ]; then
         echo ".castanha123.json" >> .gitignore
         print_success "Adicionado .castanha123.json ao .gitignore"
     fi
+    if ! grep -q "user_config.json" .gitignore; then
+        echo "user_config.json" >> .gitignore
+        print_success "Adicionado user_config.json ao .gitignore"
+    fi
 else
     echo ".castanha123.json" > .gitignore
-    print_success "Criado .gitignore com .castanha123.json"
+    echo "user_config.json" >> .gitignore
+    print_success "Criado .gitignore com .castanha123.json e user_config.json"
 fi
 
 echo ""

@@ -156,7 +156,7 @@ class GitAIAgent:
 
         while self.active:
             try:
-                command = input("\n🎯 castanha123> ").strip().lower()
+                command = input("\n🎯 castanhafodao> ").strip().lower()
 
                 if command == "analyze":
                     await self.analyze_changes()

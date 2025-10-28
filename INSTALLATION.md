@@ -45,14 +45,14 @@ Durante a execução, o script pode pedir sua senha de `sudo` se precisar instal
 
 ### 3. Verificar a Instalação
 
-Após a instalação, o comando `castanha123` deve estar disponível no seu terminal. Para verificar, tente executar:
+Após a instalação, o comando `castanhafodao` deve estar disponível no seu terminal. Para verificar, tente executar:
 
 ```bash
-castanha123 --version
+castanhafodao --version
 ```
 Ou simplesmente:
 ```bash
-castanha123
+castanhafodao
 ```
 
 Se você vir uma mensagem de boas-vindas ou um menu, a instalação foi bem-sucedida.
@@ -65,12 +65,12 @@ O agente precisa de uma chave de API para o provedor de IA que você deseja usar
 
 1.  Execute o agente:
     ```bash
-    castanha123
+    castanhafodao
     ```
 2.  No menu principal, digite `config` e pressione Enter.
 3.  No menu de configuração, selecione `1. Escolher provider de IA` e escolha seu provedor preferido (ex: `4` para Gemini).
 4.  Volte ao menu de configuração e selecione `2. Configurar API keys`. Insira sua chave de API quando solicitado.
-5.  O agente salvará a configuração em um arquivo `.castanha123.json` na raiz do seu repositório.
+5.  O agente salvará a configuração em um arquivo `.castanhafodao.json` na raiz do seu repositório.
 
 **Alternativa (variável de ambiente):** Você pode definir sua chave de API como uma variável de ambiente no seu sistema. Por exemplo, para Gemini:
 
@@ -90,7 +90,7 @@ Com o agente instalado e configurado, você pode usá-lo dentro de qualquer repo
 
 2.  **Execute o agente e use os comandos:**
     ```bash
-    castanha123
+    castanhafodao
     ```
     Você verá um menu com os comandos disponíveis:
 

@@ -40,3 +40,5 @@ ENV/
 .DS_Store
 Thumbs.db
 EOF
+
+user_config.json

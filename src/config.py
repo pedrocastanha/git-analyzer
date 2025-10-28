@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 class ConfigManager:
-    CONFIG_FILE = '../user_config.json'
+    CONFIG_FILE = 'user_config.json'
 
     DEFAULT_CONFIG = {
         'ai_provider': 'gemini',

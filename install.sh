@@ -23,13 +23,6 @@ echo  "  ${GREEN} ██║      ${GREEN1}██╔══██║${GREEN2}╚�
 echo  "  ${GREEN} ╚██████╗ ${GREEN1}██║  ██║${GREEN2}███████║${YELLOW1}   ██║   ${YELLOW2}██║  ██║${YELLOW3}██║ ╚████║${BLUE1}██║  ██║${BLUE1}███████╗${BLUE2}██║${BLUE2}██║  ██║${BLUE3}██║  ██║${NC}"
 echo  "  ${GREEN}  ╚═════╝ ${GREEN1}╚═╝  ╚═╝${GREEN2}╚══════╝${YELLOW1}   ╚═╝   ${YELLOW2}╚═╝  ╚═╝${YELLOW3}╚═╝  ╚═══╝${BLUE1}╚═╝  ╚═╝${BLUE1}╚══════╝${BLUE2}╚═╝${BLUE2}╚═╝  ╚═╝${BLUE3}╚═╝  ╚═╝${NC}"
 
-#echo  "  ${GREEN}  ██████╗${GREEN_LIGHT} █████╗${YELLOW} ███████╗${YELLOW_BRIGHT}████████╗${BLUE} █████╗${BLUE_LIGHT} ███╗   ██╗${WHITE}██╗  ██╗${WHITE} █████╗ ${NC}"
-#echo  "  ${GREEN} ██╔════╝${GREEN_LIGHT}██╔══██╗${YELLOW}██╔════╝${YELLOW_BRIGHT}╚══██╔══╝${BLUE}██╔══██╗${BLUE_LIGHT}████╗  ██║${WHITE}██║  ██║${WHITE}██╔══██╗${NC}"
-#echo  "  ${GREEN} ██║     ${GREEN_LIGHT}███████║${YELLOW}███████╗${YELLOW_BRIGHT}   ██║   ${BLUE}███████║${BLUE_LIGHT}██╔██╗ ██║${WHITE}███████║${WHITE}███████║${NC}"
-#echo  "  ${GREEN} ██║     ${GREEN_LIGHT}██╔══██║${YELLOW}╚════██║${YELLOW_BRIGHT}   ██║   ${BLUE}██╔══██║${BLUE_LIGHT}██║╚██╗██║${WHITE}██╔══██║${WHITE}██╔══██║${NC}"
-#echo  "  ${GREEN} ╚██████╗${GREEN_LIGHT}██║  ██║${YELLOW}███████║${YELLOW_BRIGHT}   ██║   ${BLUE}██║  ██║${BLUE_LIGHT}██║ ╚████║${WHITE}██║  ██║${WHITE}██║  ██║${NC}"
-#echo  "  ${GREEN}  ╚═════╝${GREEN_LIGHT}╚═╝  ╚═╝${YELLOW}╚══════╝${YELLOW_BRIGHT}   ╚═╝   ${BLUE}╚═╝  ╚═╝${BLUE_LIGHT}╚═╝  ╚═══╝${WHITE}╚═╝  ╚═╝${WHITE}╚═╝  ╚═╝${NC}"
-
 
 echo ""
 
@@ -59,26 +52,45 @@ if [ ! -d ".git" ]; then
     exit 1
 fi
 
-if ! command -v python3 &> /dev/null; then
+PYTHON_CMD=""
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &> /dev/null; then
+    # Check if python is Python 3
+    if python -c 'import sys; sys.exit(0 if sys.version_info.major == 3 else 1)' &> /dev/null; then
+        PYTHON_CMD="python"
+    fi
+fi
+
+if [ -z "$PYTHON_CMD" ]; then
     print_error "Python 3 não encontrado!"
-    print_info "Instale Python 3: sudo apt install python3 python3-pip"
+    print_info "Instale Python 3. O nome do executável deve ser 'python3' ou 'python' e estar no seu PATH."
     exit 1
 fi
 
-print_success "Python 3 encontrado: $(python3 --version)"
+print_success "Python 3 encontrado: $($PYTHON_CMD --version)"
 
-if ! command -v pip3 &> /dev/null; then
-    print_warning "pip3 não encontrado. Instalando..."
-    sudo apt update && sudo apt install -y python3-pip
+VENV_DIR=".venv"
+
+if [ ! -d "$VENV_DIR" ]; then
+    print_info "Criando ambiente virtual em '$VENV_DIR'..."
+    $PYTHON_CMD -m venv "$VENV_DIR"
+    print_success "Ambiente virtual criado."
 fi
 
-print_success "pip3 encontrado"
+print_info "Ativando ambiente virtual..."
+. "$VENV_DIR/bin/activate"
+print_success "Ambiente virtual ativado."
+
+print_info "Atualizando pip..."
+pip install --upgrade pip
+print_success "Pip atualizado."
 
 echo ""
 print_info "Instalando Git AI Agent e suas dependências..."
-pip3 install --user -e .
+pip install -e .
 
-print_success "Git AI Agent instalado em modo editável!"
+print_success "Git AI Agent instalado em modo editável no ambiente virtual!"
 
 echo ""
 if [ -f ".gitignore" ]; then

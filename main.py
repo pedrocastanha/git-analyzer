@@ -11,8 +11,8 @@ class GitAIAgent:
         self.repo_path = repo_path
         self.config_manager = ConfigManager(repo_path)
 
-        workflow = create_graph()
-        self.graph = workflow.compile()
+        self.workflow = create_graph()
+        self.graph = self.workflow.compile()
 
         self.active = True
 
@@ -29,6 +29,54 @@ class GitAIAgent:
             'commit_message': None,
             'patch': None,
             'current_action': 'analyze',
+            'user_confirmation': None,
+            'error': None,
+            'repo_path': self.repo_path,
+            'config': self.config_manager.config
+        }
+
+        result = await self.graph.ainvoke(initial_state)
+
+        if result.get('error'):
+            print(f"\n{result['error']}")
+
+        if not result.get('analysis'):
+            print("\n📭 Nenhuma mudança para analisar.")
+            return
+
+        print("\n" + "=" * 60)
+        print(result['analysis'])
+        print("=" * 60)
+
+        choice = input("\nDeseja melhorias sugeridas? (s/n): ").strip().lower()
+        result['user_confirmation'] = (choice == 's')
+
+        if result['user_confirmation']:
+            result = await self.graph.ainvoke(result)
+
+            if result.get('patch'):
+                print("\nPatch gerado:\n")
+                print(result['patch'][:500] + "..." if len(result['patch']) > 500 else result['patch'])
+
+                apply = input("\n🔨 Aplicar este patch? (s/n): ").strip().lower()
+                result['user_confirmation'] = (apply == 's')
+
+                if result['user_confirmation']:
+                    await self.graph.ainvoke(result)
+            else:
+                print("\n✅ Nenhuma melhoria automática necessária.")
+
+    async def deep_analyze(self):
+        print("Iniciando análise profunda das mudanças...")
+        print("Isso pode levar algum tempo dependendo do tamanho das mudanças.")
+
+        initial_state = {
+            'messages': [],
+            'diff': None,
+            'analysis': None,
+            'commit_message': None,
+            'patch': None,
+            'current_action': 'deep_analyze',
             'user_confirmation': None,
             'error': None,
             'repo_path': self.repo_path,
@@ -147,8 +195,10 @@ class GitAIAgent:
         print("=" * 60)
         print("Comandos:")
         print("  analyze - Analisa código")
+        print("  danalyze - Análise profunda do código")
         print("  up      - Commit e push")
         print("  config  - Configurações")
+        print("  mermaid - Mostra o código Mermaid do grafo")
         print("  exit    - Sair")
         print("=" * 60)
 
@@ -158,10 +208,14 @@ class GitAIAgent:
 
                 if command == "analyze":
                     await self.analyze_changes()
+                elif command == "danalyze":
+                    await self.deep_analyze()
                 elif command == "up":
                     await self.commit_and_push()
                 elif command == "config":
                     self.configure()
+                elif command == "mermaid":
+                    print(self.graph.get_graph().draw_mermaid())
                 elif command == "exit":
                     print("👋 Até logo!")
                     self.active = False

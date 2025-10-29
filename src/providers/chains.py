@@ -16,3 +16,13 @@ class ChainManager:
     def get_generate_commit_message_chain(llm_with_tools):
         generate_commit_message_agent_prompt = PromptManager.get_generate_commit_message_prompt()
         return generate_commit_message_agent_prompt | llm_with_tools
+
+    @staticmethod
+    def get_deep_analyze_critic_chain(llm_with_tools):
+        deep_analyze_critic_prompt = PromptManager.get_deep_analyze_critic_prompt()
+        return deep_analyze_critic_prompt | llm_with_tools
+
+    @staticmethod
+    def get_deep_analyze_constructive_chain(llm_with_tools):
+        deep_analyze_constructive_prompt = PromptManager.get_deep_analyze_constructive_prompt()
+        return deep_analyze_constructive_prompt | llm_with_tools

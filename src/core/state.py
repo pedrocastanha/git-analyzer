@@ -12,3 +12,4 @@ class GraphState(TypedDict):
     error: str | None
     repo_path: str
     config: dict
+    conversation_history: Annotated[list, add_messages]

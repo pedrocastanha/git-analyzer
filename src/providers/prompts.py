@@ -4,6 +4,8 @@ from src.messages import (
     AnalyzerSystemPrompt,
     GenerateImprovementsSystemPrompt,
     GenerateCommitMessageSystemPrompt,
+    DeepAnalyzeCriticSystemPrompt,
+    DeepAnalyzeConstructiveSystemPrompt,
 )
 
 
@@ -31,6 +33,24 @@ class PromptManager:
         return ChatPromptTemplate.from_messages(
             [
                 ("system", GenerateCommitMessageSystemPrompt.PROMPT),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
+
+    @staticmethod
+    def get_deep_analyze_critic_prompt():
+        return ChatPromptTemplate.from_messages(
+            [
+                ("system", DeepAnalyzeCriticSystemPrompt.PROMPT),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
+
+    @staticmethod
+    def get_deep_analyze_constructive_prompt():
+        return ChatPromptTemplate.from_messages(
+            [
+                ("system", DeepAnalyzeConstructiveSystemPrompt.PROMPT),
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )

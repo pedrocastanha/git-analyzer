@@ -1,5 +1,5 @@
 from src.core.state import GraphState
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage
 import git
 from src.providers.llm_providers import LLMProvider
 
@@ -149,6 +149,60 @@ async def commit_and_push_node(state: GraphState) -> dict:
             print("commit realizado")
         return {}
     except Exception as e:
-        error_message = f"Erro ao comitar/enviar mudanças: {str(e)}"
+        error_message = f"Erro ao commitar: {str(e)}"
         print(error_message)
         return {'error': error_message}
+
+async def deep_analyze_critic_node(state: GraphState) -> dict:
+    print("Agente Crítico analisando...\n")
+    conversation_history = state.get("conversation_history", [])
+    messages = [HumanMessage(content=state['diff'])] + conversation_history
+
+    try:
+        agent = LLMProvider.create(state['config'], 'deep_analyze_critic')
+        response = await agent.ainvoke({"messages": messages})
+        response.name = "Crítico"
+        return {"conversation_history": [response]}
+    except Exception as e:
+        return {"error": f"Erro no Agente Crítico: {str(e)}"}
+
+
+async def deep_analyze_constructive_node(state: GraphState) -> dict:
+    print("Agente Construtivo analisando...\n")
+    conversation_history = state.get("conversation_history", [])
+    messages = [HumanMessage(content=state['diff'])] + conversation_history
+
+    try:
+        agent = LLMProvider.create(state['config'], 'deep_analyze_constructive')
+        response = await agent.ainvoke({"messages": messages})
+        response.name = "Construtivo"
+        return {"conversation_history": [response]}
+    except Exception as e:
+        return {"error": f"Erro no Agente Construtivo: {str(e)}"}
+
+
+async def deep_generate_improvements_node(state: GraphState) -> dict:
+    print("Gerando patch de melhorias com base na análise profunda...")
+    conversation_history = state.get("conversation_history", [])
+
+    if not conversation_history or not state['diff']:
+        return {'patch': None}
+
+    final_analysis = "\n".join([f"**{msg.name}**: {msg.content}" for msg in conversation_history])
+
+    try:
+        agent = LLMProvider.create(state['config'], 'generate_improvements')
+        response = await agent.ainvoke({
+            "messages": [
+                HumanMessage(content="Gerar patch de melhorias com base na conversa a seguir.")
+            ],
+            "analysis": final_analysis,
+            "diff": state['diff']
+        })
+        patch = response.content[0]['text']
+        if "NO_CHANGES_NEEDED" in patch:
+            return {'patch': None}
+        else:
+            return {'patch': patch, "analysis": final_analysis}
+    except Exception as e:
+        return {'patch': None, 'error': f"Erro ao gerar patch profundo: {str(e)}"}

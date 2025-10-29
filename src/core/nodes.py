@@ -85,7 +85,6 @@ async def generate_commit_message_node(state: GraphState) -> dict:
     try:
         agent = LLMProvider.create(state['config'], 'generate_commit_message')
 
-        types = ', '.join(state['config'].get('conventional_commits_types', []))
         lang = state['config'].get('language', 'pt')
         lang_instruction = "em português" if lang == 'pt' else "in English"
 
@@ -94,7 +93,6 @@ async def generate_commit_message_node(state: GraphState) -> dict:
                 HumanMessage(content="Gerar mensagem de commit.")
             ],
             "diff": state['diff'],
-            "types": types,
             "lang_instruction": lang_instruction
         })
         new_messages = state['messages'] + [response]

@@ -138,7 +138,10 @@ class GitAIAgent:
             print(f"\n{result['error']}")
             return
 
-        print(f"\n✅Mensagem sugerida: {result['commit_message']}.")
+        GREEN = '\033[92m'
+        RESET = '\033[0m'
+
+        print(f"\n✅Mensagem sugerida:\n {GREEN}{result['commit_message']}{RESET}.")
 
         confirm = input("\n✅ Confirmar commit e push? (s/n): ").strip().lower()
         result['user_confirmation'] = (confirm == 's')
@@ -239,5 +242,7 @@ def main():
         print(f"❌ Erro: {e}")
         sys.exit(1)
 
+
+""" gustavo bundudu """
 if __name__ == "__main__":
     main()

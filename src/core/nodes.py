@@ -1,7 +1,20 @@
 from src.core.state import GraphState
 from langchain_core.messages import HumanMessage
 import git
+import json
 from src.providers.llm_providers import LLMProvider
+
+def extract_llm_content(response_content):
+    if isinstance(response_content, list):
+        # Handle list of strings
+        if all(isinstance(item, str) for item in response_content):
+            return "".join(response_content)
+        # Handle list of dicts
+        if len(response_content) > 0 and isinstance(response_content[0], dict) and 'text' in response_content[0]:
+            return response_content[0]['text']
+    if isinstance(response_content, str):
+        return response_content
+    return "" # Fallback
 
 
 async def get_diff_node(state: GraphState) -> dict:
@@ -155,55 +168,74 @@ async def commit_and_push_node(state: GraphState) -> dict:
         return {'error': error_message}
 
 async def deep_analyze_critic_node(state: GraphState) -> dict:
-    print("Agente Crítico analisando...\n")
+    print("--- Agente Crítico Analisando ---")
     conversation_history = state.get("conversation_history", [])
     messages = [HumanMessage(content=state['diff'])] + conversation_history
 
     try:
         agent = LLMProvider.create(state['config'], 'deep_analyze_critic')
         response = await agent.ainvoke({"messages": messages})
-        response.name = "Crítico"
-        return {"conversation_history": [response]}
+        response.name = "Crítico de Segurança e Padrões"
+        text = extract_llm_content(response.content)
+        print(f"\033[91m{text}\033[0m")
+        response.content = text
+        return {"conversation_history": conversation_history + [response]}
     except Exception as e:
         return {"error": f"Erro no Agente Crítico: {str(e)}"}
 
 
 async def deep_analyze_constructive_node(state: GraphState) -> dict:
-    print("Agente Construtivo analisando...\n")
+    print("---Agente Construtivo Analisando---")
     conversation_history = state.get("conversation_history", [])
     messages = [HumanMessage(content=state['diff'])] + conversation_history
 
     try:
         agent = LLMProvider.create(state['config'], 'deep_analyze_constructive')
         response = await agent.ainvoke({"messages": messages})
-        response.name = "Construtivo"
-        return {"conversation_history": [response]}
+        response.name = "Construtivo de Lógica e Desempenho"
+        text = extract_llm_content(response.content)
+        print(f"\033[92m{text}\033[0m")
+        response.content = text
+        return {"conversation_history": conversation_history + [response]}
     except Exception as e:
         return {"error": f"Erro no Agente Construtivo: {str(e)}"}
 
 
+import json
+
 async def deep_generate_improvements_node(state: GraphState) -> dict:
-    print("Gerando patch de melhorias com base na análise profunda...")
+    print("Gerando plano de ação e patch de melhorias...")
     conversation_history = state.get("conversation_history", [])
 
     if not conversation_history or not state['diff']:
-        return {'patch': None}
+        return {'patch': None, 'analysis': None}
 
-    final_analysis = "\n".join([f"**{msg.name}**: {msg.content}" for msg in conversation_history])
+    conversation_text = "\n".join([f"**{msg.name}**: {msg.content}" for msg in conversation_history])
+    final_analysis = f"""----------------- resultado final ------------------\n{conversation_text}"""
 
     try:
         agent = LLMProvider.create(state['config'], 'generate_improvements')
         response = await agent.ainvoke({
             "messages": [
-                HumanMessage(content="Gerar patch de melhorias com base na conversa a seguir.")
+                HumanMessage(content="Gerar plano de ação e patch com base na conversa a seguir.")
             ],
             "analysis": final_analysis,
             "diff": state['diff']
         })
-        patch = response.content[0]['text']
-        if "NO_CHANGES_NEEDED" in patch:
-            return {'patch': None}
+        
+        content = extract_llm_content(response.content)
+        # Clean markdown backticks
+        if content.startswith("```json"): content = content[7:]
+        if content.endswith("```"): content = content[:-3]
+        content = content.strip()
+
+        result = json.loads(content)
+        plan = result.get("plan")
+        patch = result.get("patch")
+
+        if not patch or "NO_CHANGES_NEEDED" in patch:
+            return {'patch': None, 'analysis': plan}
         else:
-            return {'patch': patch, "analysis": final_analysis}
+            return {'patch': patch, "analysis": plan}
     except Exception as e:
-        return {'patch': None, 'error': f"Erro ao gerar patch profundo: {str(e)}"}
+        return {'patch': None, 'analysis': None, 'error': f"Erro ao gerar melhorias: {str(e)}"}

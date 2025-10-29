@@ -84,9 +84,9 @@ class GitAIAgent:
         }
 
         result = await self.graph.ainvoke(initial_state)
-
         if result.get('error'):
             print(f"\n{result['error']}")
+            return
 
         if not result.get('analysis'):
             print("\n📭 Nenhuma mudança para analisar.")

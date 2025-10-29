@@ -23,7 +23,7 @@ def route_deep_analysis(state: GraphState):
         return "deep_generate_improvements"
 
     last_message = conversation_history[-1] if conversation_history else None
-    if last_message and last_message.name == "Crítico":
+    if last_message and last_message.name == "Crítico de Segurança e Padrões":
         return "deep_analyze_constructive"
     else:
         return "deep_analyze_critic"

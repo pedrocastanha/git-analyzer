@@ -112,13 +112,11 @@ class GitAIAgent:
 
         if choice == '1':
             print("\nProviders:")
-            print("  1. Claude")
-            print("  2. OpenAI")
-            print("  3. Ollama")
-            print("  4. Gemini")
+            print("  1. OpenAI")
+            print("  2. Gemini")
 
             p = input("\nEscolha: ").strip()
-            providers = {'1': 'claude', '2': 'openai', '3': 'ollama', '4': 'gemini'}
+            providers = {'1': 'openai', '2': 'gemini'}
 
             if p in providers:
                 self.config_manager.set('ai_provider', providers[p])

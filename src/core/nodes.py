@@ -30,40 +30,22 @@ async def get_diff_node(state: GraphState) -> dict:
     except Exception as e:
         return {'diff': None, 'error': f"Erro ao obter o diff: {str(e)}"}
 
-async def analyze_code_node(state: GraphState) -> GraphState:
-    print("Analisando o diff do repositório...")
+async def analyze_code_node(state: GraphState) -> dict:
+    print("Analisando o código...")
 
     if not state.get('diff'):
-        state['analysis'] = None
-        return state
+        return {"analysis": None}
 
     try:
-        llm = LLMProvider.create(state['config'])
+        agent = LLMProvider.create(state['config'], 'analyze')
 
-        lang = state['config'].get('language', 'pt')
-        lang_instructions = (
-            "Responda em português" if lang == "pt" else "Respond in English"
-        )
+        messages = [HumanMessage(content=state['diff'])]
+        response = await agent.ainvoke({"messages": messages})
 
-        system_prompt = f"""{lang_instructions}
-            Você é um especialista em análise de código. Analise o diff fornecido e retorne:
-            
-            1. **Resumo das mudanças**: O que foi alterado ou implementado.
-            2. **Padrões e boas práticas**: Identifique possíveis melhorias ou violações de boas práticas.
-            3. **Sugestões de refatoração**: Melhorias específicas para o código.
-            4. **Possíveis bugs**: Identifique problemas ou bugs potenciais.
-            
-            Seja objetivo e prático."""
-
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Diff:\n```\n{state['diff']}\n```")
-        ]
-
-        response = await llm.ainvoke(messages)
+        analysis = response.content[0]['text']
         return {
-            "analysis": response.content,
-            "messages": messages + [AIMessage(content=response.content)]
+            "analysis": analysis,
+            "messages": messages + [response]
         }
     except Exception as e:
         return {"analysis": None, "error": f"Erro na análise do código: {str(e)}"}
@@ -76,28 +58,21 @@ async def generate_improvements_node(state: GraphState) -> dict:
         return {'patch': None}
 
     try:
-        llm = LLMProvider.create(state['config'])
+        agent = LLMProvider.create(state['config'], 'generate_improvements')
 
-        prompt = f"""Com base nesta análise:
-        
-            {state['analysis']}
-    
-            E neste diff:
-            ```
-            {state['diff']}
-            ```
-            Gere um patch Git que implementa as melhorias sugeridas.
-            Retorne APENAS o patch no formato Git diff.
-            Se não houver melhorias práticas, responda: "NO_CHANGES_NEEDED" 
-        """
-
-        messages = [HumanMessage(content=prompt)]
-        response = await llm.ainvoke(messages)
-        new_messages = messages + [AIMessage(content=response.content)]
-        if "NO_CHANGES_NEEDED" in response.content:
+        response = await agent.ainvoke({
+            "messages": [
+                HumanMessage(content="Gerar patch de melhorias.")
+            ],
+            "analysis": state['analysis'],
+            "diff": state['diff']
+        })
+        new_messages = state['messages'] + [response]
+        patch = response.content[0]['text']
+        if "NO_CHANGES_NEEDED" in patch:
             return {'patch': None, "messages": new_messages}
         else:
-            return {'patch': response.content, "messages": new_messages}
+            return {'patch': patch, "messages": new_messages}
     except Exception as e:
         return {'patch': None, 'error': f"Erro ao gerar o patch: {str(e)}"}
 
@@ -108,29 +83,23 @@ async def generate_commit_message_node(state: GraphState) -> dict:
         return {'commit_message': None}
 
     try:
-        llm = LLMProvider.create(state['config'])
+        agent = LLMProvider.create(state['config'], 'generate_commit_message')
 
         types = ', '.join(state['config'].get('conventional_commits_types', []))
         lang = state['config'].get('language', 'pt')
         lang_instruction = "em português" if lang == 'pt' else "in English"
 
-        prompt = f"""Analise este diff e gere uma mensagem de commit seguindo conventional commits
-        
-        Formato: <type:(<scope>): <description>
-        
-        Tipos válidos: {types}
-        
-        {state['diff']}
-        
-        ```
-
-        Retorne APENAS a mensagem de commit {lang_instruction}, sem explicações.
-        """
-
-        messages = [HumanMessage(content=prompt)]
-        response = await llm.ainvoke(messages)
-        new_messages = messages + [AIMessage(content=response.content)]
-        return {'commit_message': response.content.strip(), "messages": new_messages}
+        response = await agent.ainvoke({
+            "messages": [
+                HumanMessage(content="Gerar mensagem de commit.")
+            ],
+            "diff": state['diff'],
+            "types": types,
+            "lang_instruction": lang_instruction
+        })
+        new_messages = state['messages'] + [response]
+        commit_message = response.content[0]['text']
+        return {'commit_message': commit_message.strip(), "messages": new_messages}
 
     except Exception as e:
         return {'commit_message': None, 'error': f"Erro ao gerar commit: {e}"}

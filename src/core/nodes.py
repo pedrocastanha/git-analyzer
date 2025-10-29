@@ -79,6 +79,9 @@ async def generate_improvements_node(state: GraphState) -> dict:
 async def generate_commit_message_node(state: GraphState) -> dict:
     print("Gerando mensagem de commit...")
 
+    if state.get('commit_message'):
+        return {}
+
     if not state['diff']:
         return {'commit_message': None}
 

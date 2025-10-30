@@ -12,21 +12,13 @@ Um assistente Git inteligente que usa IA para analisar código, sugerir melhoria
 
 ## 🚀 Instalação
 
-### Método 1: Script de instalação rápida (via curl)
-
-```bash
-curl -sSL https://raw.githubusercontent.com/pedrocastanha/git-analyzer/main/install.sh | bash
-```
-
-### Método 2: Clone manual (recomendado se curl não funcionar)
+### Método 1: Clone manual (recomendado se curl não funcionar)
 
 ```bash
 git clone https://github.com/pedrocastanha/git-analyzer.git
 cd git-analyzer
 ./install.sh
 ```
-
-**⚠️ Nota:** Se você encontrar problemas com curl, use o Método 2.
 
 ### Pós-instalação
 

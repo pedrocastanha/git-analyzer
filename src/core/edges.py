@@ -1,7 +1,5 @@
 from typing import Literal
 
-from langchain.agents import AgentState
-
 from src.core.state import GraphState
 
 def shoulf_continue_analysis(state: GraphState) -> Literal["generate_improvements", "end"]:
@@ -22,7 +20,7 @@ def should_apply_patch(state: GraphState) -> str:
     print("✅ Aplicando patch confirmado...\n")
     return "apply_patch"
 
-def has_diff(state: AgentState) -> Literal["continue", "end"]:
+def has_diff(state: GraphState) -> Literal["continue", "end"]:
     if state.get('diff'):
         return "continue"
     return "end"

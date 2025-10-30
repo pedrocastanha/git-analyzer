@@ -1,5 +1,7 @@
 import asyncio
 import sys
+import traceback
+
 import git
 
 from src.config import ConfigManager
@@ -67,8 +69,11 @@ class GitAIAgent:
                 print("\n✅ Nenhuma melhoria automática necessária.")
 
     async def deep_analyze(self):
-        print("Iniciando análise profunda das mudanças...")
-        print("Isso pode levar algum tempo dependendo do tamanho das mudanças.")
+        print("\n" + "=" * 80)
+        print("🔍 ANÁLISE PROFUNDA - Multi-Agent Code Review")
+        print("=" * 80)
+        print("Os agentes Crítico e Construtivo irão discutir as mudanças...")
+        print("Aguarde, isso pode levar alguns minutos.\n")
 
         initial_state = {
             'messages': [],
@@ -83,36 +88,112 @@ class GitAIAgent:
             'config': self.config_manager.config
         }
 
-        result = await self.graph.ainvoke(initial_state)
+        try:
+            result = await self.graph.ainvoke(initial_state)
+        except Exception as e:
+            print(f"\n❌ Erro durante a execução: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return
+
         if result.get('error'):
             print(f"\n{result['error']}")
             return
 
-        if not result.get('analysis'):
-            print("\n📭 Nenhuma mudança para analisar.")
+        conversation = result.get('conversation_history', [])
+
+        if not conversation:
+            print("\n📭 Nenhuma análise foi gerada.")
             return
 
-        print("\n" + "=" * 60)
-        print(result['analysis'])
-        print("=" * 60)
+        print("\n" + "=" * 80)
+        print("📊 RESUMO DA DISCUSSÃO ENTRE OS AGENTES")
+        print("=" * 80)
+        print(f"\n💬 Total de mensagens: {len(conversation)}\n")
 
-        choice = input("\nDeseja melhorias sugeridas? (s/n): ").strip().lower()
-        result['user_confirmation'] = (choice == 's')
+        for i, msg in enumerate(conversation, 1):
+            agent_name = getattr(msg, 'name', 'Agente Desconhecido')
+            content = getattr(msg, 'content', '')
 
-        if result['user_confirmation']:
-            result = await self.graph.ainvoke(result)
-
-            if result.get('patch'):
-                print("\nPatch gerado:\n")
-                print(result['patch'][:500] + "..." if len(result['patch']) > 500 else result['patch'])
-
-                apply = input("\n🔨 Aplicar este patch? (s/n): ").strip().lower()
-                result['user_confirmation'] = (apply == 's')
-
-                if result['user_confirmation']:
-                    await self.graph.ainvoke(result)
+            if "Crítico" in agent_name:
+                color = '\033[91m'
+                emoji = "🔴"
             else:
-                print("\n✅ Nenhuma melhoria automática necessária.")
+                color = '\033[92m'
+                emoji = "🟢"
+
+            reset = '\033[0m'
+
+            print(f"{emoji} [{i}] {agent_name}")
+            print("-" * 80)
+
+            if len(content) > 400:
+                print(f"{color}{content[:400]}...{reset}")
+                print(f"\n[... {len(content) - 400} caracteres omitidos ...]")
+            else:
+                print(f"{color}{content}{reset}")
+
+            print("\n")
+
+        print("=" * 80)
+
+        if result.get('analysis'):
+            print("\n📋 PLANO DE AÇÃO FINAL")
+            print("=" * 80)
+            print(result['analysis'])
+            print("=" * 80)
+
+        if not result.get('patch'):
+            print("\n✅ Análise concluída!")
+            print("Os agentes não identificaram necessidade de mudanças automáticas.")
+            return
+
+        print("\n📦 PATCH GERADO")
+        print("=" * 80)
+
+        patch = result['patch']
+        patch_lines = patch.split('\n')
+
+        if len(patch_lines) > 20:
+            preview = '\n'.join(patch_lines[:20])
+            print(preview)
+            print(f"\n... ({len(patch_lines) - 20} linhas restantes)")
+        else:
+            print(patch)
+
+        print("=" * 80)
+
+        print(f"\n📊 Estatísticas do patch:")
+        print(f"   • Total de linhas: {len(patch_lines)}")
+        print(f"   • Tamanho: {len(patch)} caracteres")
+
+        apply = input("\n🔨 Deseja aplicar este patch? (s/n): ").strip().lower()
+
+        if apply != 's':
+            print("\n⏭️  Patch não aplicado. Análise salva.")
+            return
+
+        # Aplicar o patch manualmente (o grafo já terminou, mas o patch está em result['patch'])
+        try:
+            import os
+            os.makedirs("/tmp/ai_git", exist_ok=True)
+            patch_file = "/tmp/ai_git/patch.patch"
+
+            # Salva o patch que já está na memória
+            with open(patch_file, 'w') as f:
+                f.write(result['patch'])
+
+            # Aplica o patch usando git
+            repo = git.Repo(self.repo_path)
+            repo.git.apply(patch_file)
+
+            print("\n✅ Patch aplicado com sucesso!")
+            print("As mudanças foram aplicadas ao seu repositório.")
+
+        except Exception as e:
+            print(f"\n❌ Erro ao aplicar patch: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     async def commit_and_push(self):
         """Executa o grafo de commit"""

@@ -2,6 +2,7 @@ import os
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 
 class LLMManager:
@@ -11,7 +12,14 @@ class LLMManager:
             return ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash",
                 temperature=0.5,
-                api_key=config.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY')
+                api_key=config.get('gemini_api_key', '') or os.getenv('GEMINI_API_KEY'),
+                # Desabilita filtros de segurança para análise de código
+                safety_settings={
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                }
             )
         else:
             return ChatOpenAI(

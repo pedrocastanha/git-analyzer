@@ -97,7 +97,8 @@ print_success "Pip atualizado."
 echo ""
 
 print_info "Instalando Git AI Agent e suas dependências no ambiente virtual..."
-pip install .
+print_warning "Isso pode levar alguns minutos..."
+pip install --upgrade --force-reinstall .
 
 print_success "Git AI Agent instalado com sucesso no ambiente virtual!"
 

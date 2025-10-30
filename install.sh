@@ -61,10 +61,6 @@ print_info "Mudando para o diretório de instalação para continuar..."
 cd "$APP_HOME_DIR"
 echo ""
 
-# A verificação de repositório Git foi removida daqui.
-# O instalador não precisa mais rodar de dentro de um repositório.
-# A ferramenta em si, quando executada, fará as checagens necessárias.
-
 PYTHON_CMD=""
 if command -v python3 &> /dev/null; then
     PYTHON_CMD="python3"
@@ -110,36 +106,61 @@ echo ""
 print_info "Criando link simbólico para acesso global ao comando 'castanhafodao'..."
 
 EXECUTABLE_PATH="$APP_HOME_DIR/.venv/bin/castanhafodao"
-SYMLINK_PATH="/usr/local/bin/castanhafodao"
+LOCAL_BIN="$HOME/.local/bin"
+SYMLINK_PATH="$LOCAL_BIN/castanhafodao"
 
-if [ -L "$SYMLINK_PATH" ] && [ "$(readlink "$SYMLINK_PATH")" = "$EXECUTABLE_PATH" ]; then
-    print_success "Link simbólico global já existe e está correto."
-else
-    print_info "Será necessário privilégio de administrador (sudo) para criar o link em /usr/local/bin."
-    if sudo ln -sf "$EXECUTABLE_PATH" "$SYMLINK_PATH"; then
-        print_success "Link simbólico criado com sucesso!"
+mkdir -p "$LOCAL_BIN"
+
+rm -f "$SYMLINK_PATH"
+
+ln -s "$EXECUTABLE_PATH" "$SYMLINK_PATH"
+print_success "Link simbólico criado em $SYMLINK_PATH"
+
+if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
+    echo ""
+    print_warning "O diretório ~/.local/bin não está no seu PATH."
+    echo ""
+    echo "Adicione a seguinte linha ao seu arquivo de configuração do shell:"
+    echo ""
+
+    if [ -n "$ZSH_VERSION" ]; then
+        SHELL_RC="$HOME/.zshrc"
+        echo "    echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc"
+        echo "    source ~/.zshrc"
+    elif [ -n "$BASH_VERSION" ]; then
+        SHELL_RC="$HOME/.bashrc"
+        echo "    echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
+        echo "    source ~/.bashrc"
     else
-        print_error "Falha ao criar o link simbólico. A instalação pode não estar acessível globalmente."
-        exit 1
+        echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
     fi
+    echo ""
+    print_info "Ou feche e abra o terminal novamente."
+else
+    print_success "~/.local/bin já está no PATH!"
 fi
 
 echo ""
 echo "============================================================"
-print_success "Instalação concluída!"
+print_success "🎉 Instalação concluída com sucesso!"
 echo "============================================================"
 echo ""
-echo "📝 Próximos passos:"
-echo "   1. Configure sua API key:"
-echo "      (Use o comando 'castanhafodao config' para configurar)"
+echo "📍 Próximos passos:"
 echo ""
-echo "   2. Execute o agente:"
-echo "      castanhafodao"
+echo "   1️⃣  Execute o comando:"
+echo "      ${GREEN}castanhafodao${NC}"
 echo ""
-echo "   3. Use os comandos:"
-echo "      - analyze: Analisa mudanças"
-echo "      - up: Commit e push inteligente"
-echo "      - config: Configurações"
+echo "   2️⃣  Na primeira execução, você será guiado para:"
+echo "      • Escolher seu provider de IA (OpenAI ou Gemini)"
+echo "      • Configurar sua API key"
 echo ""
-echo "🎉 Aproveite seu Git AI Agent!"
+echo "   3️⃣  Comandos disponíveis:"
+echo "      • ${GREEN}analyze${NC}   - Análise simples de código"
+echo "      • ${GREEN}danalyze${NC}  - Análise profunda (multi-agent)"
+echo "      • ${GREEN}up${NC}        - Commit e push inteligente"
+echo "      • ${GREEN}config${NC}    - Alterar configurações"
+echo "      • ${GREEN}exit${NC}      - Sair"
+echo ""
+echo "============================================================"
+echo "💡 Dica: Execute em qualquer repositório Git!"
 echo "============================================================"

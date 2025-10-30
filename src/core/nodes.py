@@ -200,10 +200,8 @@ async def deep_analyze_critic_node(state: GraphState) -> dict:
     messages = []
 
     if not conversation_history:
-        # Primeira vez: envia o diff
         messages = [HumanMessage(content=f"Analise o seguinte diff:\n\n {diff}")]
     else:
-        # Rodadas seguintes: adiciona HumanMessage para o Gemini aceitar
         messages = conversation_history.copy()
         messages.append(HumanMessage(content="Por favor, responda ao ponto levantado pelo Construtivo."))
 
@@ -246,12 +244,8 @@ async def deep_analyze_constructive_node(state: GraphState) -> dict:
         print("⚠️  AVISO: Construtivo chamado sem histórico!")
         return {"error": "Construtivo precisa do Crítico primeiro"}
 
-    # Gemini exige que a última mensagem seja HumanMessage
-    # Então adicionamos uma mensagem do usuário pedindo para o Construtivo responder
-    # Incluímos também um lembrete do diff original para dar contexto
     messages = conversation_history.copy()
 
-    # Pega a última mensagem do Crítico para dar contexto específico
     last_critic_msg = ""
     for msg in reversed(messages):
         if hasattr(msg, 'name') and msg.name == "Crítico de Segurança e Padrões":
@@ -340,7 +334,6 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
 
         content = extract_llm_content(response.content)
 
-        # Verifica se o conteúdo está vazio
         if not content or len(content.strip()) < 10:
             print("⚠️  LLM retornou resposta vazia ou muito curta!")
             print("Provavelmente a discussão foi muito longa ou complexa.")
@@ -356,7 +349,6 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
             print("⚠️  Não foi possível extrair JSON. Tentando fallback...")
             print(f"Conteúdo (primeiros 500 chars):\n{content[:500]}\n")
 
-            # Fallback: usa o conteúdo como análise, sem patch
             return {
                 'patch': None,
                 'analysis': content if content else "Não foi possível gerar análise.",

@@ -1,9 +1,11 @@
 import json
+import os
 from pathlib import Path
 
 
 class ConfigManager:
-    CONFIG_FILE = 'user_config.json'
+    CONFIG_DIR = Path.home() / '.config' / 'castanhafodao'
+    CONFIG_FILE = CONFIG_DIR / 'config.json'
 
     DEFAULT_CONFIG = {
         'ai_provider': 'gemini',
@@ -18,7 +20,8 @@ class ConfigManager:
     }
 
     def __init__(self, repo_path="."):
-        self.config_path = Path(repo_path) / self.CONFIG_FILE
+        self.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        self.config_path = self.CONFIG_FILE
         self.config = self.load_config()
 
     def load_config(self):
@@ -39,3 +42,13 @@ class ConfigManager:
 
     def set(self, key, value):
         self.config[key] = value
+
+    def is_first_run(self):
+        """Verifica se é a primeira execução (config não existe ou sem API keys)"""
+        if not self.config_path.exists():
+            return True
+
+        has_openai = self.config.get('openai_api_key', '').strip() != ''
+        has_gemini = self.config.get('gemini_api_key', '').strip() != ''
+
+        return not (has_openai or has_gemini)

@@ -230,6 +230,65 @@ class GitAIAgent:
         if result['user_confirmation']:
             await self.graph.ainvoke(result)
 
+    def first_time_setup(self):
+        """Setup inicial interativo"""
+        print("\n" + "=" * 60)
+        print("🎉 Bem-vindo ao castanhafodao!")
+        print("=" * 60)
+        print("\nParece que é sua primeira vez aqui!")
+        print("Vamos fazer uma configuração rápida.\n")
+
+        print("=" * 60)
+        print("📦 Escolha seu provider de IA:")
+        print("=" * 60)
+        print("  1. OpenAI (GPT-4, GPT-4o-mini, GPT-3.5)")
+        print("  2. Gemini (Google)")
+        print("")
+
+        while True:
+            provider_choice = input("Escolha (1 ou 2): ").strip()
+            if provider_choice in ['1', '2']:
+                break
+            print("❌ Opção inválida. Digite 1 ou 2.")
+
+        provider = 'openai' if provider_choice == '1' else 'gemini'
+        self.config_manager.set('ai_provider', provider)
+
+        print(f"\n✅ Provider selecionado: {provider.upper()}")
+        print("")
+
+        print("=" * 60)
+        print("🔑 Configure sua API Key:")
+        print("=" * 60)
+
+        if provider == 'openai':
+            print("\n💡 Onde conseguir:")
+            print("   https://platform.openai.com/api-keys")
+            print("")
+            api_key = input("Cole sua OpenAI API Key: ").strip()
+            if api_key:
+                self.config_manager.set('openai_api_key', api_key)
+                print("✅ API Key configurada!")
+            else:
+                print("⚠️  Nenhuma key fornecida. Configure depois com 'config'.")
+        else:
+            print("\n💡 Onde conseguir:")
+            print("   https://aistudio.google.com/app/apikey")
+            print("")
+            api_key = input("Cole sua Gemini API Key: ").strip()
+            if api_key:
+                self.config_manager.set('gemini_api_key', api_key)
+                print("✅ API Key configurada!")
+            else:
+                print("⚠️  Nenhuma key fornecida. Configure depois com 'config'.")
+
+        self.config_manager.save_config()
+
+        print("\n" + "=" * 60)
+        print("✅ Configuração concluída!")
+        print("=" * 60)
+        print("\n📚 Dica: Use 'config' para alterar configurações a qualquer momento.\n")
+
     def configure(self):
         """Menu de configuração"""
         print("\n⚙️  Configuração")
@@ -275,6 +334,9 @@ class GitAIAgent:
 
     async def run(self):
         """Loop principal"""
+        if self.config_manager.is_first_run():
+            self.first_time_setup()
+
         print("\n🤖 Git AI Agent (LangGraph) ativado!")
         print("=" * 60)
         print("Comandos:")
@@ -324,6 +386,5 @@ def main():
         sys.exit(1)
 
 
-""" gustavo bundudu """
 if __name__ == "__main__":
     main()

@@ -43,7 +43,7 @@ echo  "  ${GREEN}  ╚═════╝ ${GREEN1}╚═╝  ╚═╝${GREEN2}�
 echo ""
 
 sleep 0.3
-echo "🚀 Instalando Git AI Agent (Castanha Fodão)..."
+echo "🚀 Instalando Git AI Agent ( GitCast )..."
 echo "============================================================"
 
 
@@ -104,11 +104,11 @@ print_success "Git AI Agent instalado com sucesso no ambiente virtual!"
 
 echo ""
 
-print_info "Criando link simbólico para acesso global ao comando 'castanhafodao'..."
+print_info "Criando link simbólico para acesso global ao comando 'gitcast'..."
 
-EXECUTABLE_PATH="$APP_HOME_DIR/.venv/bin/castanhafodao"
+EXECUTABLE_PATH="$APP_HOME_DIR/.venv/bin/gitcast"
 LOCAL_BIN="$HOME/.local/bin"
-SYMLINK_PATH="$LOCAL_BIN/castanhafodao"
+SYMLINK_PATH="$LOCAL_BIN/gitcast"
 
 mkdir -p "$LOCAL_BIN"
 
@@ -149,7 +149,7 @@ echo ""
 echo "📍 Próximos passos:"
 echo ""
 echo "   1️⃣  Execute o comando:"
-echo "      ${GREEN}castanhafodao${NC}"
+echo "      ${GREEN}gitcast${NC}"
 echo ""
 echo "   2️⃣  Na primeira execução, você será guiado para:"
 echo "      • Escolher seu provider de IA (OpenAI ou Gemini)"

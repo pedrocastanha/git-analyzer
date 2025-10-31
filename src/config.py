@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class ConfigManager:
-    CONFIG_DIR = Path.home() / '.config' / 'castanhafodao'
+    CONFIG_DIR = Path.home() / '.config' / 'gitcast'
     CONFIG_FILE = CONFIG_DIR / 'config.json'
 
     DEFAULT_CONFIG = {

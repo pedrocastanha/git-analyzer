@@ -233,7 +233,7 @@ class GitAIAgent:
     def first_time_setup(self):
         """Setup inicial interativo"""
         print("\n" + "=" * 60)
-        print("🎉 Bem-vindo ao castanhafodao!")
+        print("🎉 Bem-vindo ao gitcast!")
         print("=" * 60)
         print("\nParece que é sua primeira vez aqui!")
         print("Vamos fazer uma configuração rápida.\n")
@@ -332,6 +332,68 @@ class GitAIAgent:
                     v = v[:8] + "..." + v[-4:]
                 print(f"  {k}: {v}")
 
+    def get_details(self):
+        """Mostra detalhes dos comandos"""
+        details = {
+            "analyze": {
+                "icon": "1️⃣",
+                "title": "Análise de Mudanças",
+                "description": "Este comando ativa um agente de IA que utiliza o provider configurado para analisar as alterações no seu projeto Git. O agente avalia o código, identifica pontos fortes, aponta áreas para melhoria e pode sugerir um patch com otimizações."
+            },
+            "danalyze": {
+                "icon": "2️⃣",
+                "title": "Análise Profunda (Deep Analyze)",
+                "description": "O 'danalyze' (Deep Analyze) orquestra uma colaboração entre dois agentes de IA especializados:\n\n"
+                               "- Agente Crítico: Focado em identificar bugs, vulnerabilidades de segurança e falhas de design.\n"
+                               "- Agente Construtivo: Focado em propor otimizações de desempenho, refatoração de código e melhorias na arquitetura.\n\n"
+                               "Como funciona: Os agentes dialogam em um processo iterativo de revisão de código. O Crítico aponta os problemas, e o Construtivo sugere soluções. Este ciclo continua até que ambos cheguem a um consenso ou atinjam um número predefinido de interações, resultando em um plano de ação detalhado e, se aplicável, um patch."
+            },
+            "up": {
+                "icon": "3️⃣",
+                "title": "Commit e Push Automatizados",
+                "description": "Este comando utiliza um agente de IA treinado em 'Conventional Commits' para analisar suas mudanças e gerar uma mensagem de commit clara e padronizada. Após a sua aprovação, o agente realiza o commit e o push para o repositório remoto, agilizando o seu fluxo de trabalho."
+            },
+            "mermaid": {
+                "icon": "4️⃣",
+                "title": "Visualização do Grafo de Fluxo",
+                "description": "Gera e exibe o código no formato Mermaid do grafo de fluxo de trabalho da aplicação. Este recurso é útil para visualizar a arquitetura dos agentes, entender suas interações e depurar o fluxo de execução."
+            },
+            "config": {
+                "icon": "5️⃣",
+                "title": "Configuração Interativa",
+                "description": "Abre um menu interativo que permite gerenciar as configurações da aplicação, como:\n\n"
+                               "- Selecionar o provedor de IA (OpenAI, Gemini, etc.).\n"
+                               "- Configurar as chaves de API (API Keys).\n"
+                               "- Visualizar as configurações ativas."
+            },
+            "details": {
+                "icon": "6️⃣",
+                "title": "Detalhes dos Comandos",
+                "description": "Exibe esta tela, com a documentação detalhada de todos os comandos disponíveis na ferramenta."
+            },
+            "exit": {
+                "icon": "7️⃣",
+                "title": "Sair",
+                "description": "Encerra a sessão atual do agente Git AI e finaliza a aplicação."
+            }
+        }
+
+        print("\n📋 Detalhes dos Comandos")
+        print("=" * 80)
+
+        for i, (command, info) in enumerate(details.items()):
+            print(f"{info['icon']} {info['title']} ({command})")
+            print("-" * 80)
+            # Imprime a descrição formatada, linha por linha
+            for line in info['description'].split('\n'):
+                print(line)
+            
+            # Adiciona a linha final apenas se não for o último item
+            if i < len(details) - 1:
+                print("=" * 80)
+
+
+
     async def run(self):
         """Loop principal"""
         if self.config_manager.is_first_run():
@@ -343,14 +405,15 @@ class GitAIAgent:
         print("  analyze - Analisa código")
         print("  danalyze - Análise profunda do código")
         print("  up      - Commit e push")
-        print("  config  - Configurações")
         print("  mermaid - Mostra o código Mermaid do grafo")
+        print("  details - Detalhes dos comandos")
+        print("  config  - Configurações")
         print("  exit    - Sair")
         print("=" * 60)
 
         while self.active:
             try:
-                command = input("\n🎯 castanhafodao> ").strip().lower()
+                command = input("\n🎯 gitcast> ").strip().lower()
 
                 if command == "analyze":
                     await self.analyze_changes()
@@ -358,10 +421,12 @@ class GitAIAgent:
                     await self.deep_analyze()
                 elif command == "up":
                     await self.commit_and_push()
-                elif command == "config":
-                    self.configure()
                 elif command == "mermaid":
                     print(self.graph.get_graph().draw_mermaid())
+                elif command == "config":
+                    self.configure()
+                elif command == "details":
+                    self.get_details()
                 elif command == "exit":
                     print("👋 Até logo!")
                     self.active = False

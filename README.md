@@ -1,4 +1,4 @@
-# 🤖 castanhafodao - AI Git Assistant
+# 🤖 gitcast - AI Git Assistant
 
 Um assistente Git inteligente que usa IA para analisar código, sugerir melhorias e gerar commits automáticos.
 
@@ -43,7 +43,7 @@ source ~/.zshrc
 Na primeira vez, você será guiado por um setup interativo:
 
 ```bash
-castanhafodao
+gitcast
 ```
 
 Você precisará:
@@ -55,7 +55,7 @@ Você precisará:
 Entre em qualquer repositório Git e execute:
 
 ```bash
-castanhafodao
+gitcast
 ```
 
 Comandos dentro do CLI:
@@ -75,13 +75,13 @@ Comandos dentro do CLI:
 git add .
 
 # Execute
-castanhafodao
+gitcast
 > analyze
 ```
 
 **Análise profunda (recomendado para mudanças complexas):**
 ```bash
-castanhafodao
+gitcast
 > danalyze
 # Dois agentes discutem o código:
 # 🔴 Crítico (segurança + padrões)
@@ -93,7 +93,7 @@ castanhafodao
 # Faça mudanças
 git add .
 
-castanhafodao
+gitcast
 > up
 # Gera mensagem seguindo conventional commits
 # Faz commit e push automaticamente
@@ -112,12 +112,12 @@ castanhafodao
 
 ## ⚙️ Configuração
 
-As configurações ficam em `~/.config/castanhafodao/config.json`.
+As configurações ficam em `~/.config/gitcast/config.json`.
 
 ### Alterar provider
 
 ```bash
-castanhafodao
+gitcast
 > config
 > 1  # Escolher provider
 ```
@@ -125,7 +125,7 @@ castanhafodao
 ### Alterar API key
 
 ```bash
-castanhafodao
+gitcast
 > config
 > 2  # Configurar API keys
 ```
@@ -235,7 +235,7 @@ brew install python3
 ### Erro de API key
 
 ```bash
-castanhafodao
+gitcast
 > config
 > 2  # Reconfigure sua API key
 ```

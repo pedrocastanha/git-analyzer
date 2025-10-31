@@ -18,6 +18,54 @@ def extract_llm_content(response_content):
         return response_content
     return ""
 
+def colorize_code_blocks(text: str) -> str:
+    """Adiciona cores aos blocos de código no relatório executivo."""
+    import re
+
+    # Cores ANSI
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+
+    # Colorir cabeçalhos
+    text = re.sub(r'^(##\s+.*?)$', f'{BOLD}{CYAN}\\1{RESET}', text, flags=re.MULTILINE)
+    text = re.sub(r'^(###\s+.*?)$', f'{BOLD}{BLUE}\\1{RESET}', text, flags=re.MULTILINE)
+
+    # Colorir prioridades
+    text = text.replace('🔴 Alta', f'{RED}{BOLD}🔴 Alta{RESET}')
+    text = text.replace('🟡 Média', f'{YELLOW}{BOLD}🟡 Média{RESET}')
+    text = text.replace('🟢 Baixa', f'{GREEN}{BOLD}🟢 Baixa{RESET}')
+
+    # Colorir labels em negrito
+    text = re.sub(r'\*\*Arquivo:\*\*', f'{BOLD}Arquivo:{RESET}', text)
+    text = re.sub(r'\*\*Linha:\*\*', f'{BOLD}Linha:{RESET}', text)
+    text = re.sub(r'\*\*Prioridade:\*\*', f'{BOLD}Prioridade:{RESET}', text)
+    text = re.sub(r'\*\*Motivo:\*\*', f'{BOLD}Motivo:{RESET}', text)
+    text = re.sub(r'\*\*Ação:\*\*', f'{BOLD}Ação:{RESET}', text)
+
+    # Colorir "Código Atual" em vermelho
+    text = re.sub(
+        r'\*\*Código Atual:\*\*\s*```(\w+)?\s*(.*?)```',
+        lambda m: f'{BOLD}Código Atual:{RESET}\n```{m.group(1) or ""}\n{RED}{m.group(2)}{RESET}\n```',
+        text,
+        flags=re.DOTALL
+    )
+
+    # Colorir "Código Sugerido" em verde
+    text = re.sub(
+        r'\*\*Código Sugerido:\*\*\s*```(\w+)?\s*(.*?)```',
+        lambda m: f'{BOLD}Código Sugerido:{RESET}\n```{m.group(1) or ""}\n{GREEN}{m.group(2)}{RESET}\n```',
+        text,
+        flags=re.DOTALL
+    )
+
+    return text
+
 def extract_json_from_llm_output(text: str) -> dict:
     """Extrai JSON de saída de LLM, sendo tolerante a vários formatos."""
 
@@ -344,13 +392,13 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
 
     === FIM DA DISCUSSÃO ===
 
-    Com base nesta discussão profunda, gere um patch Git VÁLIDO e APLICÁVEL."""
+    Com base nesta discussão profunda, gere um RELATÓRIO EXECUTIVO detalhado."""
     try:
-        print("🔧 Invocando agente especialista em geração de patches...\n")
-        agent = LLMProvider.create(state['config'], 'patch_generator')
+        print("📊 Gerando relatório executivo da análise...\n")
+        agent = LLMProvider.create(state['config'], 'executive_report')
         response = await agent.ainvoke({
             "messages": [
-                HumanMessage(content="Gerar plano de ação e patch com base na conversa a seguir.")
+                HumanMessage(content="Gerar relatório executivo com base na discussão.")
             ],
             "analysis": final_analysis,
             "diff": state['diff']
@@ -360,58 +408,26 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
 
         if not content or len(content.strip()) < 10:
             print("⚠️  LLM retornou resposta vazia ou muito curta!")
-            print("Provavelmente a discussão foi muito longa ou complexa.")
-            print("Vamos criar um plano básico sem patch.\n")
             return {
                 'patch': None,
-                'analysis': "A discussão foi concluída, mas não foi possível gerar um patch automático. Revise as sugestões dos agentes manualmente.",
+                'analysis': "Não foi possível gerar o relatório executivo.",
                 'messages': state.get('messages', []) + [response]
             }
 
-        result = extract_json_from_llm_output(content)
-        if not result:
-            print("⚠️  Não foi possível extrair JSON. Tentando fallback...")
-            print(f"Conteúdo (primeiros 1000 chars):\n{content[:1000]}\n")
+        # Exibe o relatório executivo com cores
+        colorized_content = colorize_code_blocks(content)
 
-            try:
-                debug_file = "/tmp/ai_git/last_llm_response.txt"
-                os.makedirs("/tmp/ai_git", exist_ok=True)
-                with open(debug_file, 'w') as f:
-                    f.write(content)
-                print(f"💾 Resposta completa salva em: {debug_file}\n")
-            except:
-                pass
+        print("\n" + "="*80)
+        print("📊 RELATÓRIO EXECUTIVO - ANÁLISE PROFUNDA")
+        print("="*80)
+        print(colorized_content)
+        print("="*80 + "\n")
 
-            return {
-                'patch': None,
-                'analysis': content if content else "Não foi possível gerar análise.",
-                'messages': state.get('messages', []) + [response]
-            }
-
-        plan = result.get("plan", "Nenhum plano fornecido")
-        patch = result.get("patch", "")
-
-        print(f"📋 Plano extraído ({len(plan)} chars)")
-        print(f"📦 Patch extraído ({len(patch)} chars)\n")
-
-        if not patch or "NO_CHANGES_NEEDED" in patch:
-            print("\n" + "="*60)
-            print("📋 REVIEW DO CÓDIGO - ANÁLISE PROFUNDA")
-            print("="*60)
-            print(plan)
-            print("="*60 + "\n")
-            return {
-                'patch': None,
-                'analysis': plan,
-                'messages': state.get('messages', []) + [response]
-            }
-        else:
-            print(f"✅ Patch gerado com sucesso!\n")
-            return {
-                'patch': patch,
-                'analysis': plan,
-                'messages': state.get('messages', []) + [response]
-            }
+        return {
+            'patch': None,  # Não gera mais patches
+            'analysis': content,
+            'messages': state.get('messages', []) + [response]
+        }
     except Exception as e:
         error_msg = f"Erro ao gerar melhorias: {str(e)}"
         print(f"❌ {error_msg}")

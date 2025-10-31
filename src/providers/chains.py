@@ -28,6 +28,6 @@ class ChainManager:
         return deep_analyze_constructive_prompt | llm_with_tools
 
     @staticmethod
-    def get_patch_generator_chain(llm_with_tools):
-        patch_generator_prompt = PromptManager.get_patch_generator_prompt()
-        return patch_generator_prompt | llm_with_tools
+    def get_executive_report_chain(llm_with_tools):
+        executive_report_prompt = PromptManager.get_executive_report_prompt()
+        return executive_report_prompt | llm_with_tools

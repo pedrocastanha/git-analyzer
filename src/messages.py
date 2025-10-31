@@ -62,8 +62,8 @@ class GenerateImprovementsSystemPrompt:
             - Use markdown para formatação clara
     """
 
-class PatchGeneratorSystemPrompt:
-    PROMPT = """Você é um especialista em gerar patches Git válidos e precisos.
+class ExecutiveReportSystemPrompt:
+    PROMPT = """Você é um especialista em sintetizar discussões técnicas em relatórios executivos acionáveis.
 
             **Conversa dos analistas:**
             {analysis}
@@ -74,68 +74,55 @@ class PatchGeneratorSystemPrompt:
             ```
 
             **SUA MISSÃO:**
-            1. Ler a discussão completa dos analistas (Critic e Constructive)
-            2. Identificar as melhorias acordadas
-            3. Gerar um patch Git PERFEITO no formato unified diff
-            4. Se não houver mudanças necessárias, retornar NO_CHANGES_NEEDED
-
-            **REGRAS CRÍTICAS PARA GERAR O PATCH:**
-            1. O patch DEVE ser aplicável com `git apply`
-            2. Use o formato EXATO do unified diff
-            3. Cada linha do patch DEVE começar com: ` ` (contexto), `-` (removida), ou `+` (adicionada)
-            4. Os números de linha no cabeçalho `@@` devem estar corretos
-            5. Inclua pelo menos 3 linhas de contexto antes e depois de cada mudança
-            6. O hash no `index` pode ser fictício (use abc123..def456)
+            Sintetizar a discussão completa entre os agentes Crítico e Construtivo em um relatório claro e acionável.
 
             **FORMATO DE RETORNO:**
-            Retorne APENAS um JSON válido:
+            Retorne um relatório em markdown seguindo esta estrutura:
 
-            ```json
-            {{
-              "plan": "Resumo das mudanças em 2-3 frases",
-              "patch": "diff --git a/arquivo.java b/arquivo.java\\nindex abc123..def456 100644\\n--- a/arquivo.java\\n+++ b/arquivo.java\\n@@ -10,7 +10,7 @@\\n contexto\\n contexto\\n contexto\\n-linha removida\\n+linha adicionada\\n contexto\\n contexto\\n contexto"
-            }}
+            ## 🎯 Resumo Executivo
+            [Parágrafo breve (2-3 frases) resumindo a discussão e conclusão]
+
+            ## 📋 Mudanças Recomendadas
+
+            ### 1. [Nome da Mudança]
+            **Arquivo:** `caminho/completo/Arquivo.java`
+            **Linha:** ~XX
+            **Prioridade:** 🔴 Alta / 🟡 Média / 🟢 Baixa
+            **Motivo:** [Por que essa mudança é necessária]
+            **Ação:** [O que exatamente deve ser feito]
+            **Código Atual:**
+            ```java
+            // código que existe atualmente
+            ```
+            **Código Sugerido:**
+            ```java
+            // código proposto
             ```
 
-            **FORMATO QUANDO NÃO HÁ MUDANÇAS:**
-            ```json
-            {{
-              "plan": "✅ Código revisado. Pontos fortes: [liste]. Nenhuma mudança necessária.",
-              "patch": "NO_CHANGES_NEEDED"
-            }}
-            ```
+            ### 2. [Próxima Mudança]
+            [Mesmo formato...]
 
-            **EXEMPLO DE PATCH VÁLIDO:**
-            ```
-            diff --git a/Controller.java b/Controller.java
-            index abc123..def456 100644
-            --- a/Controller.java
-            +++ b/Controller.java
-            @@ -45,10 +45,12 @@ public class Controller {{
-               @PostMapping("/cron")
-               @ResponseStatus(HttpStatus.CREATED)
-            -  public void triggerCron() throws IOException {{
-            -    service.execute();
-            +  public ResponseEntity<String> triggerCron() {{
-            +    try {{
-            +      service.execute();
-            +      log.info("Cron triggered successfully");
-            +      return ResponseEntity.ok("Success");
-            +    }} catch (Exception e) {{
-            +      log.error("Error: {{}}", e.getMessage());
-            +      return ResponseEntity.status(500).body("Error");
-            +    }}
-               }}
+            ## ✅ Pontos Fortes Identificados
+            - [Lista os aspectos positivos do código]
+            - [Mais pontos fortes...]
 
-               @GetMapping
-            ```
+            ## ⚠️ Riscos e Considerações
+            - [Riscos identificados durante a discussão]
+            - [Considerações importantes...]
 
-            **ATENÇÃO:**
-            - Cada mudança DEVE ter contexto suficiente (3+ linhas antes e depois)
-            - Escape caracteres especiais corretamente ({{, }}, \\n, etc)
-            - Não truncue o patch - inclua TODAS as mudanças
-            - Seja criterioso: só gere patch se as mudanças forem significativas
+            ## 📚 Próximos Passos
+            1. [Primeiro passo a ser executado]
+            2. [Segundo passo...]
+            3. [Terceiro passo...]
+
+            **REGRAS:**
+            - Seja específico: indique arquivo, linha aproximada, e código exato
+            - Priorize as mudanças: Alta (segurança/bugs), Média (padrões), Baixa (melhorias)
+            - Use exemplos de código quando relevante
+            - Seja conciso mas completo
+            - Se não houver mudanças necessárias, diga claramente no Resumo Executivo
     """
+
 
 class GenerateCommitMessageSystemPrompt:
     PROMPT = """Gere uma mensagem de commit CONCISA seguindo Conventional Commits.

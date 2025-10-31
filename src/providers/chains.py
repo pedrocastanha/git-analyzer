@@ -26,3 +26,8 @@ class ChainManager:
     def get_deep_analyze_constructive_chain(llm_with_tools):
         deep_analyze_constructive_prompt = PromptManager.get_deep_analyze_constructive_prompt()
         return deep_analyze_constructive_prompt | llm_with_tools
+
+    @staticmethod
+    def get_patch_generator_chain(llm_with_tools):
+        patch_generator_prompt = PromptManager.get_patch_generator_prompt()
+        return patch_generator_prompt | llm_with_tools

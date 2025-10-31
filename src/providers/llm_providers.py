@@ -16,5 +16,7 @@ class LLMProvider:
             return AgentManager.get_deep_analyze_critic_agent(provider, config)
         elif type == 'deep_analyze_constructive':
             return AgentManager.get_deep_analyze_constructive_agent(provider, config)
+        elif type == 'patch_generator':
+            return AgentManager.get_patch_generator_agent(provider, config)
         elif type == 'up':
             return AgentManager.get_analyzer_agent(provider, config)

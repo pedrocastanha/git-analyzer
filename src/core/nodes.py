@@ -1,5 +1,6 @@
 import traceback
 import re
+import os
 
 from src.core.state import GraphState
 from langchain_core.messages import HumanMessage, AIMessage
@@ -18,26 +19,36 @@ def extract_llm_content(response_content):
     return ""
 
 def extract_json_from_llm_output(text: str) -> dict:
+    """Extrai JSON de saída de LLM, sendo tolerante a vários formatos."""
+
     match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
     if match:
-        json_str = match.group(1)
+        json_str = match.group(1).strip()
         try:
             return json.loads(json_str)
-        except json.JSONDecodeError:
-            return {}
+        except json.JSONDecodeError as e:
+            print(f"⚠️  Erro ao parsear JSON do bloco ```json: {e}")
 
     match = re.search(r"```\s*(.*?)\s*```", text, re.DOTALL)
     if match:
-        json_str = match.group(1)
+        json_str = match.group(1).strip()
         try:
             return json.loads(json_str)
         except json.JSONDecodeError:
             pass
 
     try:
-        return json.loads(text)
+        return json.loads(text.strip())
     except json.JSONDecodeError:
         pass
+
+    pattern = r'\{\s*"plan"\s*:\s*"([^"]*(?:\\"[^"]*)*)"\s*,\s*"patch"\s*:\s*"([^"]*(?:\\"[^"]*)*)"'
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        plan = match.group(1)
+        patch = match.group(2)
+        return {"plan": plan, "patch": patch}
+
     return None
 
 async def get_diff_node(state: GraphState) -> dict:
@@ -88,7 +99,7 @@ async def analyze_code_node(state: GraphState) -> dict:
 
 
 async def generate_improvements_node(state: GraphState) -> dict:
-    print("Gerando patch de melhorias...")
+    print("Gerando sugestões de melhorias...\n")
 
     if not state['analysis'] or not state['diff']:
         return {'patch': None}
@@ -98,19 +109,24 @@ async def generate_improvements_node(state: GraphState) -> dict:
 
         response = await agent.ainvoke({
             "messages": [
-                HumanMessage(content="Gerar patch de melhorias.")
+                HumanMessage(content="Gerar sugestões de melhorias manuais.")
             ],
             "analysis": state['analysis'],
             "diff": state['diff']
         })
         new_messages = state['messages'] + [response]
-        patch = extract_llm_content(response.content)
-        if "NO_CHANGES_NEEDED" in patch:
-            return {'patch': None, "messages": new_messages}
-        else:
-            return {'patch': patch, "messages": new_messages}
+        content = extract_llm_content(response.content)
+
+        print("\n" + "="*70)
+        print("📋 SUGESTÕES DE MELHORIAS")
+        print("="*70)
+        print(content)
+        print("="*70 + "\n")
+
+        return {'patch': None, 'analysis': content, "messages": new_messages}
+
     except Exception as e:
-        return {'patch': None, 'error': f"Erro ao gerar o patch: {str(e)}"}
+        return {'patch': None, 'error': f"Erro ao gerar sugestões: {str(e)}"}
 
 async def generate_commit_message_node(state: GraphState) -> dict:
     print("Gerando mensagem de commit...")
@@ -149,10 +165,17 @@ async def apply_patch_node(state: GraphState) -> dict:
 
     try:
         repo = git.Repo(state['repo_path'])
-        patch_file = "/tmp/ai_git/patch.patch"
+        patch_dir = "/tmp/ai_git"
+        patch_file = f"{patch_dir}/patch.patch"
+
+        os.makedirs(patch_dir, exist_ok=True)
+
+        patch_content = state['patch']
+        if r'\n' in patch_content or '\\n' in patch_content:
+            patch_content = patch_content.replace('\\n', '\n')
 
         with open(patch_file, 'w') as f:
-            f.write(state['patch'])
+            f.write(patch_content)
 
         repo.git.apply(patch_file)
         print("Patch aplicado com sucesso.")
@@ -321,9 +344,10 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
 
     === FIM DA DISCUSSÃO ===
 
-    Com base nesta discussão, gere um plano de ação e um patch Git."""
+    Com base nesta discussão profunda, gere um patch Git VÁLIDO e APLICÁVEL."""
     try:
-        agent = LLMProvider.create(state['config'], 'generate_improvements')
+        print("🔧 Invocando agente especialista em geração de patches...\n")
+        agent = LLMProvider.create(state['config'], 'patch_generator')
         response = await agent.ainvoke({
             "messages": [
                 HumanMessage(content="Gerar plano de ação e patch com base na conversa a seguir.")
@@ -347,7 +371,16 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
         result = extract_json_from_llm_output(content)
         if not result:
             print("⚠️  Não foi possível extrair JSON. Tentando fallback...")
-            print(f"Conteúdo (primeiros 500 chars):\n{content[:500]}\n")
+            print(f"Conteúdo (primeiros 1000 chars):\n{content[:1000]}\n")
+
+            try:
+                debug_file = "/tmp/ai_git/last_llm_response.txt"
+                os.makedirs("/tmp/ai_git", exist_ok=True)
+                with open(debug_file, 'w') as f:
+                    f.write(content)
+                print(f"💾 Resposta completa salva em: {debug_file}\n")
+            except:
+                pass
 
             return {
                 'patch': None,
@@ -362,7 +395,11 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
         print(f"📦 Patch extraído ({len(patch)} chars)\n")
 
         if not patch or "NO_CHANGES_NEEDED" in patch:
-            print("✅ Nenhuma mudança necessária segundo a análise\n")
+            print("\n" + "="*60)
+            print("📋 REVIEW DO CÓDIGO - ANÁLISE PROFUNDA")
+            print("="*60)
+            print(plan)
+            print("="*60 + "\n")
             return {
                 'patch': None,
                 'analysis': plan,

@@ -1,9 +1,6 @@
 import asyncio
 import sys
-import traceback
-
 import git
-
 from src.config import ConfigManager
 from src.core.graph import create_graph
 
@@ -31,7 +28,7 @@ class GitAIAgent:
             'commit_message': None,
             'patch': None,
             'current_action': 'analyze',
-            'user_confirmation': None,
+            'user_confirmation': True,
             'error': None,
             'repo_path': self.repo_path,
             'config': self.config_manager.config
@@ -40,33 +37,10 @@ class GitAIAgent:
         result = await self.graph.ainvoke(initial_state)
 
         if result.get('error'):
-            print(f"\n{result['error']}")
-
-        if not result.get('analysis'):
-            print("\n📭 Nenhuma mudança para analisar.")
+            print(f"\n❌ {result['error']}")
             return
 
-        print("\n" + "=" * 60)
-        print(result['analysis'])
-        print("=" * 60)
-
-        choice = input("\nDeseja melhorias sugeridas? (s/n): ").strip().lower()
-        result['user_confirmation'] = (choice == 's')
-
-        if result['user_confirmation']:
-            result = await self.graph.ainvoke(result)
-
-            if result.get('patch'):
-                print("\nPatch gerado:\n")
-                print(result['patch'][:500] + "..." if len(result['patch']) > 500 else result['patch'])
-
-                apply = input("\n🔨 Aplicar este patch? (s/n): ").strip().lower()
-                result['user_confirmation'] = (apply == 's')
-
-                if result['user_confirmation']:
-                    await self.graph.ainvoke(result)
-            else:
-                print("\n✅ Nenhuma melhoria automática necessária.")
+        print("\nℹ️  Análise concluída! As sugestões acima devem ser aplicadas manualmente.\n")
 
     async def deep_analyze(self):
         print("\n" + "=" * 80)
@@ -173,17 +147,18 @@ class GitAIAgent:
             print("\n⏭️  Patch não aplicado. Análise salva.")
             return
 
-        # Aplicar o patch manualmente (o grafo já terminou, mas o patch está em result['patch'])
         try:
             import os
             os.makedirs("/tmp/ai_git", exist_ok=True)
             patch_file = "/tmp/ai_git/patch.patch"
 
-            # Salva o patch que já está na memória
-            with open(patch_file, 'w') as f:
-                f.write(result['patch'])
+            patch_content = result['patch']
+            if r'\n' in patch_content or '\\n' in patch_content:
+                patch_content = patch_content.replace('\\n', '\n')
 
-            # Aplica o patch usando git
+            with open(patch_file, 'w') as f:
+                f.write(patch_content)
+
             repo = git.Repo(self.repo_path)
             repo.git.apply(patch_file)
 
@@ -384,11 +359,9 @@ class GitAIAgent:
         for i, (command, info) in enumerate(details.items()):
             print(f"{info['icon']} {info['title']} ({command})")
             print("-" * 80)
-            # Imprime a descrição formatada, linha por linha
             for line in info['description'].split('\n'):
                 print(line)
             
-            # Adiciona a linha final apenas se não for o último item
             if i < len(details) - 1:
                 print("=" * 80)
 

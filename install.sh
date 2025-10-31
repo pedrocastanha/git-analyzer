@@ -120,23 +120,43 @@ print_success "Link simbólico criado em $SYMLINK_PATH"
 if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
     echo ""
     print_warning "O diretório ~/.local/bin não está no seu PATH."
-    echo ""
-    echo "Adicione a seguinte linha ao seu arquivo de configuração do shell:"
+    print_info "Configurando automaticamente..."
     echo ""
 
+    SHELL_RC=""
     if [ -n "$ZSH_VERSION" ]; then
         SHELL_RC="$HOME/.zshrc"
-        echo "    echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc"
-        echo "    source ~/.zshrc"
     elif [ -n "$BASH_VERSION" ]; then
         SHELL_RC="$HOME/.bashrc"
-        echo "    echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
-        echo "    source ~/.bashrc"
     else
-        echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
+        case "$SHELL" in
+            */zsh)
+                SHELL_RC="$HOME/.zshrc"
+                ;;
+            */bash)
+                SHELL_RC="$HOME/.bashrc"
+                ;;
+            *)
+                SHELL_RC="$HOME/.profile"
+                ;;
+        esac
     fi
-    echo ""
-    print_info "Ou feche e abra o terminal novamente."
+
+    PATH_EXPORT='export PATH="$HOME/.local/bin:$PATH"'
+
+    if grep -qF "$PATH_EXPORT" "$SHELL_RC" 2>/dev/null; then
+        print_success "PATH já configurado em $SHELL_RC"
+    else
+        echo "" >> "$SHELL_RC"
+        echo "# Adicionado por Git AI Agent (gitcast) installer" >> "$SHELL_RC"
+        echo "$PATH_EXPORT" >> "$SHELL_RC"
+        print_success "PATH adicionado automaticamente ao $SHELL_RC"
+        echo ""
+        print_warning "IMPORTANTE: Para usar 'gitcast' neste terminal, execute:"
+        echo "    ${GREEN}source $SHELL_RC${NC}"
+        echo ""
+        print_info "Ou feche e abra o terminal novamente."
+    fi
 else
     print_success "~/.local/bin já está no PATH!"
 fi
@@ -162,6 +182,4 @@ echo "      • ${GREEN}up${NC}        - Commit e push inteligente"
 echo "      • ${GREEN}config${NC}    - Alterar configurações"
 echo "      • ${GREEN}exit${NC}      - Sair"
 echo ""
-echo "============================================================"
-echo "💡 Dica: Execute em qualquer repositório Git!"
 echo "============================================================"

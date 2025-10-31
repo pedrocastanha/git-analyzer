@@ -33,3 +33,9 @@ class AgentManager:
         llm = LLMManager.get_llm(model, config)
         llm_with_tools = llm.bind_tools(tools_analyzer)
         return ChainManager.get_deep_analyze_constructive_chain(llm_with_tools)
+
+    @staticmethod
+    def get_patch_generator_agent(model: str, config: dict):
+        llm = LLMManager.get_llm(model, config)
+        llm_with_tools = llm.bind_tools(tools_analyzer)
+        return ChainManager.get_patch_generator_chain(llm_with_tools)

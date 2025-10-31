@@ -6,6 +6,7 @@ from src.messages import (
     GenerateCommitMessageSystemPrompt,
     DeepAnalyzeCriticSystemPrompt,
     DeepAnalyzeConstructiveSystemPrompt,
+    PatchGeneratorSystemPrompt,
 )
 
 
@@ -51,6 +52,15 @@ class PromptManager:
         return ChatPromptTemplate.from_messages(
             [
                 ("system", DeepAnalyzeConstructiveSystemPrompt.PROMPT),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
+
+    @staticmethod
+    def get_patch_generator_prompt():
+        return ChatPromptTemplate.from_messages(
+            [
+                ("system", PatchGeneratorSystemPrompt.PROMPT),
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )

@@ -219,20 +219,20 @@ class GitAIAgent:
             "analyze": {
                 "icon": "1️⃣",
                 "title": "Análise de Mudanças",
-                "description": "Este comando ativa um agente de IA que utiliza o provider configurado para analisar as alterações no seu projeto Git. O agente avalia o código, identifica pontos fortes, aponta áreas para melhoria e pode sugerir um patch com otimizações."
+                "description": "Este comando ativa um agente de IA que utiliza o provider configurado para analisar as alterações no seu projeto Git. O agente avalia o código, identifica pontos fortes e aponta áreas para melhoria, gerando sugestões de melhorias manuais formatadas em markdown que devem ser aplicadas por você."
             },
             "danalyze": {
                 "icon": "2️⃣",
                 "title": "Análise Profunda (Deep Analyze)",
                 "description": "O 'danalyze' (Deep Analyze) orquestra uma colaboração entre dois agentes de IA especializados:\n\n"
-                               "- Agente Crítico: Focado em identificar bugs, vulnerabilidades de segurança e falhas de design.\n"
-                               "- Agente Construtivo: Focado em propor otimizações de desempenho, refatoração de código e melhorias na arquitetura.\n\n"
-                               "Como funciona: Os agentes dialogam em um processo iterativo de revisão de código. O Crítico aponta os problemas, e o Construtivo sugere soluções. Este ciclo continua até que ambos cheguem a um consenso ou atinjam um número predefinido de interações, resultando em um plano de ação detalhado e, se aplicável, um patch."
+                               "- 🔴 Agente Crítico: Focado em identificar bugs, vulnerabilidades de segurança e falhas de design.\n"
+                               "- 🟢 Agente Construtivo: Focado em propor otimizações de desempenho, refatoração de código e melhorias na arquitetura.\n\n"
+                               "Como funciona: Os agentes dialogam em um processo iterativo de revisão de código. O Crítico aponta os problemas, e o Construtivo sugere soluções. Este ciclo continua até que ambos cheguem a um consenso ou atinjam 8 interações. No final, é gerado um Relatório Executivo colorido com todas as mudanças recomendadas, priorizadas e com exemplos de código (vermelho = atual, verde = sugerido)."
             },
             "up": {
                 "icon": "3️⃣",
                 "title": "Commit e Push Automatizados",
-                "description": "Este comando utiliza um agente de IA treinado em 'Conventional Commits' para analisar suas mudanças e gerar uma mensagem de commit clara e padronizada. Após a sua aprovação, o agente realiza o commit e o push para o repositório remoto, agilizando o seu fluxo de trabalho."
+                "description": "Este comando utiliza um agente de IA treinado em 'Conventional Commits' para analisar suas mudanças e gerar uma mensagem de commit concisa e padronizada (máximo 72 caracteres, sem explicações adicionais). Após a sua aprovação, o agente realiza o commit e o push para o repositório remoto, agilizando o seu fluxo de trabalho."
             },
             "mermaid": {
                 "icon": "4️⃣",

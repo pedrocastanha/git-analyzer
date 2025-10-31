@@ -4,10 +4,10 @@ Um assistente Git inteligente que usa IA para analisar código, sugerir melhoria
 
 ## ✨ Features
 
-- 🔍 **Análise de código** - Detecta bugs, problemas de segurança e más práticas
-- 🧠 **Análise profunda** - Multi-agent discussion para revisões complexas
-- 📝 **Commits inteligentes** - Gera mensagens de commit seguindo conventional commits
-- 🔧 **Auto-apply patches** - Aplica melhorias automaticamente
+- 🔍 **Análise simples** - Sugestões de melhorias manuais formatadas em markdown
+- 🧠 **Análise profunda** - Multi-agent discussion com relatório executivo colorido
+- 📝 **Commits inteligentes** - Mensagens concisas seguindo conventional commits
+- 🎨 **Interface colorida** - Código atual (vermelho) vs sugerido (verde)
 - 🤝 **Multi-provider** - Suporta OpenAI (GPT-4) e Google (Gemini)
 
 ## 🚀 Instalação
@@ -197,9 +197,6 @@ git-analyzer/
 - GitPython
 - OpenAI SDK / Google GenAI SDK
 
-## 📝 Licença
-
-MIT License - use livremente!
 
 ## 🤝 Contribuindo
 
@@ -212,33 +209,6 @@ Contributions são bem-vindas! Abra issues ou pull requests.
 - Configure `auto_push: false` se preferir revisar antes de push
 - O diff é truncado em 15000 chars por padrão (ajustável)
 
-## 🐛 Troubleshooting
-
-### Comando não encontrado
-
-```bash
-# Adicione ~/.local/bin ao PATH
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-### Python não encontrado
-
-Instale Python 3.9+:
-```bash
-# Ubuntu/Debian
-sudo apt install python3 python3-pip python3-venv
-
-# macOS
-brew install python3
-```
-
-### Erro de API key
-
-```bash
-gitcast
-> config
-> 2  # Reconfigure sua API key
-```
 
 ---
 

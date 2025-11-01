@@ -90,8 +90,6 @@ gitcast
 
 **Commit automático:**
 ```bash
-# Faça mudanças
-git add .
 
 gitcast
 > up

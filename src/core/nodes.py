@@ -343,7 +343,7 @@ async def deep_analyze_critic_node(state: GraphState) -> dict:
             print(f"Response.content: {response.content}")
             return {"error": ("Agente Crítico não gerou resposta válida" if language == "pt" else "Critical Agent did not generate a valid response")}
 
-        print(text)
+        print(f"{RED}{text}{RESET}")
 
         ai_message = AIMessage(content=text, name="Crítico de Segurança e Padrões" if language == "pt" else "Security and Standards Critic")
 
@@ -423,7 +423,7 @@ async def deep_analyze_constructive_node(state: GraphState) -> dict:
             print(f"Response.content: {response.content}")
             return {"error": ("Agente Construtivo não gerou resposta válida" if language == "pt" else "Constructive Agent did not generate a valid response")}
 
-        print(text)
+        print(f"{GREEN}{text}{RESET}")
 
         ai_message = AIMessage(content=text, name="Construtivo de Lógica e Desempenho" if language == "pt" else "Logic and Performance Constructive")
 

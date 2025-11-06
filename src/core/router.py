@@ -31,27 +31,41 @@ def route_deep_analysis(state: GraphState):
         return "deep_generate_improvements"
 
     if len(conversation_history) >= 2:
-        critic_messages = [
-            msg
-            for msg in conversation_history
-            if hasattr(msg, "name") and msg.name in ["Crítico de Segurança e Padrões", "Security and Standards Critic"]
-        ]
-        constructive_messages = [
-            msg
-            for msg in conversation_history
-            if hasattr(msg, "name") and msg.name in ["Construtivo de Lógica e Desempenho", "Logic and Performance Constructive"]
-        ]
+        last_two_messages = conversation_history[-2:]
 
-        if critic_messages and constructive_messages:
-            last_critic = critic_messages[-1]
-            last_constructive = constructive_messages[-1]
+        agent_names = []
+        for msg in last_two_messages:
+            if hasattr(msg, "name"):
+                agent_names.append(msg.name)
 
-            critic_agreed = "AGREEMENT" in str(last_critic.content).upper()
-            constructive_agreed = "AGREEMENT" in str(last_constructive.content).upper()
+        has_critic = any(name in ["Crítico de Segurança e Padrões", "Security and Standards Critic"] for name in agent_names)
+        has_constructive = any(name in ["Construtivo de Lógica e Desempenho", "Logic and Performance Constructive"] for name in agent_names)
 
-            if critic_agreed and constructive_agreed:
-                print("🤝 ACORDO MÚTUO detectado!")
+        if has_critic and has_constructive:
+            agreement_keywords = ["AGREEMENT", "AGREED", "CONCUR", "ACKNOWLEDGE", "CONSENSUS"]
+
+            both_agreed = True
+            for msg in last_two_messages:
+                content_upper = str(msg.content).upper()
+                has_agreement = any(keyword in content_upper for keyword in agreement_keywords)
+
+                if not has_agreement:
+                    both_agreed = False
+                    break
+
+            if both_agreed:
+                print("\n🤝 ACORDO MÚTUO detectado!")
                 print("   🔴 Crítico concordou ✓")
                 print("   🟢 Construtivo concordou ✓")
                 print("   Finalizando discussão...\n")
                 return "deep_generate_improvements"
+
+    if conversation_history:
+        last_message = conversation_history[-1]
+        if hasattr(last_message, "name"):
+            if last_message.name in ["Crítico de Segurança e Padrões", "Security and Standards Critic"]:
+                return "deep_analyze_constructive"
+            elif last_message.name in ["Construtivo de Lógica e Desempenho", "Logic and Performance Constructive"]:
+                return "deep_analyze_critic"
+
+    return "deep_analyze_constructive"

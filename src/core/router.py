@@ -26,20 +26,20 @@ def route_deep_analysis(state: GraphState):
 
     conversation_history = state.get("conversation_history", [])
 
-    if len(conversation_history) >= 8:
-        print("⏱️  Limite de 8 mensagens atingido. Finalizando discussão...")
+    if len(conversation_history) >= 18:
+        print("⏱️  Limite de 18 mensagens atingido. Finalizando discussão...")
         return "deep_generate_improvements"
 
     if len(conversation_history) >= 2:
         critic_messages = [
             msg
             for msg in conversation_history
-            if hasattr(msg, "name") and msg.name == "Crítico de Segurança e Padrões"
+            if hasattr(msg, "name") and msg.name in ["Crítico de Segurança e Padrões", "Security and Standards Critic"]
         ]
         constructive_messages = [
             msg
             for msg in conversation_history
-            if hasattr(msg, "name") and msg.name == "Construtivo de Lógica e Desempenho"
+            if hasattr(msg, "name") and msg.name in ["Construtivo de Lógica e Desempenho", "Logic and Performance Constructive"]
         ]
 
         if critic_messages and constructive_messages:
@@ -55,19 +55,3 @@ def route_deep_analysis(state: GraphState):
                 print("   🟢 Construtivo concordou ✓")
                 print("   Finalizando discussão...\n")
                 return "deep_generate_improvements"
-
-    last_message = conversation_history[-1] if conversation_history else None
-
-    if last_message and hasattr(last_message, "name"):
-        agent_name = last_message.name
-        print(f"🔄 Último agente: {agent_name}")
-
-        if agent_name == "Crítico de Segurança e Padrões":
-            print("➡️  Próximo: Agente Construtivo\n")
-            return "deep_analyze_constructive"
-        else:
-            print("➡️  Próximo: Agente Crítico\n")
-            return "deep_analyze_critic"
-    else:
-        print("🔴 Iniciando com Agente Crítico\n")
-        return "deep_analyze_critic"

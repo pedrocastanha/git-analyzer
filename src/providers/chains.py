@@ -23,10 +23,8 @@ class ChainManager:
 
     @staticmethod
     def get_deep_analyze_critic_chain(llm_with_tools, language):
-        deep_analyze_critic_prompt = PromptManager.get_deep_analyze_critic_prompt(
-            language
-        )
-        return deep_analyze_critic_prompt | llm_with_tools
+        critic_prompt = PromptManager.get_deep_analyze_critic_prompt(language)
+        return critic_prompt | llm_with_tools
 
     @staticmethod
     def get_deep_analyze_constructive_chain(llm_with_tools, language):

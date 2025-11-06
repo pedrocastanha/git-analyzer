@@ -8,6 +8,12 @@ import git
 import json
 from src.providers.llm_providers import LLMProvider
 
+# ANSI color codes
+RED = "\033[91m"
+GREEN = "\033[92m"
+RESET = "\033[0m"
+
+
 
 def extract_llm_content(response_content):
     if isinstance(response_content, list):
@@ -40,26 +46,42 @@ def colorize_code_blocks(text: str) -> str:
     text = re.sub(r"^(##\s+.*?)$", f"{BOLD}{CYAN}\\1{RESET}", text, flags=re.MULTILINE)
     text = re.sub(r"^(###\s+.*?)$", f"{BOLD}{BLUE}\\1{RESET}", text, flags=re.MULTILINE)
 
-    text = text.replace("🔴 Alta", f"{RED}{BOLD}🔴 Alta{RESET}")
-    text = text.replace("🟡 Média", f"{YELLOW}{BOLD}🟡 Média{RESET}")
-    text = text.replace("🟢 Baixa", f"{GREEN}{BOLD}🟢 Baixa{RESET}")
+    replacements = {
+        "🔴 Alta": f"{RED}{BOLD}🔴 Alta{RESET}",
+        "🔴 High": f"{RED}{BOLD}🔴 High{RESET}",
+        "🟡 Média": f"{YELLOW}{BOLD}🟡 Média{RESET}",
+        "🟡 Medium": f"{YELLOW}{BOLD}🟡 Medium{RESET}",
+        "🟢 Baixa": f"{GREEN}{BOLD}🟢 Baixa{RESET}",
+        "🟢 Low": f"{GREEN}{BOLD}🟢 Low{RESET}",
+        "**Arquivo:**": f"{BOLD}Arquivo:{RESET}",
+        "**File:**": f"{BOLD}File:{RESET}",
+        "**Linha:**": f"{BOLD}Linha:{RESET}",
+        "**Line:**": f"{BOLD}Line:{RESET}",
+        "**Prioridade:**": f"{BOLD}Prioridade:{RESET}",
+        "**Priority:**": f"{BOLD}Priority:{RESET}",
+        "**Motivo:**": f"{BOLD}Motivo:{RESET}",
+        "**Reason:**": f"{BOLD}Reason:{RESET}",
+        "**Ação:**": f"{BOLD}Ação:{RESET}",
+        "**Action:**": f"{BOLD}Action:{RESET}",
+        "**Código Atual:**": f"{BOLD}Código Atual:{RESET}",
+        "**Current Code:**": f"{BOLD}Current Code:{RESET}",
+        "**Código Sugerido:**": f"{BOLD}Código Sugerido:{RESET}",
+        "**Suggested Code:**": f"{BOLD}Suggested Code:{RESET}",
+    }
 
-    text = re.sub(r"\*\*Arquivo:\*\*", f"{BOLD}Arquivo:{RESET}", text)
-    text = re.sub(r"\*\*Linha:\*\*", f"{BOLD}Linha:{RESET}", text)
-    text = re.sub(r"\*\*Prioridade:\*\*", f"{BOLD}Prioridade:{RESET}", text)
-    text = re.sub(r"\*\*Motivo:\*\*", f"{BOLD}Motivo:{RESET}", text)
-    text = re.sub(r"\*\*Ação:\*\*", f"{BOLD}Ação:{RESET}", text)
+    for old, new in replacements.items():
+        text = text.replace(old, new)
 
     text = re.sub(
-        r"\*\*Código Atual:\*\*\s*```(\w+)?\s*(.*?)```",
-        lambda m: f'{BOLD}Código Atual:{RESET}\n```{m.group(1) or ""}\n{RED}{m.group(2)}{RESET}\n```',
+        r"(\*\*Código Atual:\*\*|\*\*Current Code:\*\*)\s*```(\w+)?\s*(.*?)```",
+        lambda m: f'{BOLD}{m.group(1)}{RESET}\n```{m.group(2) or ""}\n{RED}{m.group(3)}{RESET}\n```',
         text,
         flags=re.DOTALL,
     )
 
     text = re.sub(
-        r"\*\*Código Sugerido:\*\*\s*```(\w+)?\s*(.*?)```",
-        lambda m: f'{BOLD}Código Sugerido:{RESET}\n```{m.group(1) or ""}\n{GREEN}{m.group(2)}{RESET}\n```',
+        r"(\*\*Código Sugerido:\*\*|\*\*Suggested Code:\*\*)\s*```(\w+)?\s*(.*?)```",
+        lambda m: f'{BOLD}{m.group(1)}{RESET}\n```{m.group(2) or ""}\n{GREEN}{m.group(3)}{RESET}\n```',
         text,
         flags=re.DOTALL,
     )
@@ -102,7 +124,8 @@ def extract_json_from_llm_output(text: str) -> dict:
 
 
 async def get_diff_node(state: GraphState) -> dict:
-    print("Obtendo o diff do repositório...")
+    language = state["config"].get("language", "pt")
+    print("Obtendo o diff do repositório..." if language == "pt" else "Getting the repository diff...")
 
     try:
         repo = git.Repo(state["repo_path"])
@@ -111,12 +134,12 @@ async def get_diff_node(state: GraphState) -> dict:
 
         full_diff = ""
         if diff_unstaged:
-            full_diff += "=== Mudanças não staged ===\n" + diff_unstaged + "\n\n"
+            full_diff += ("=== Mudanças não staged ===\n" if language == "pt" else "=== Unstaged changes ===\n") + diff_unstaged + "\n\n"
         if diff_staged:
-            full_diff += "=== Mudanças staged ===\n" + diff_staged + "\n"
+            full_diff += ("=== Mudanças staged ===\n" if language == "pt" else "=== Staged changes ===\n") + diff_staged + "\n"
 
         if not full_diff:
-            return {"diff": None, "error": "Nenhuma mudança detectada no repositório."}
+            return {"diff": None, "error": "Nenhuma mudança detectada no repositório." if language == "pt" else "No changes detected in the repository."}
 
         else:
             max_size = state["config"].get("diff_max_size", 15000)
@@ -125,11 +148,12 @@ async def get_diff_node(state: GraphState) -> dict:
             return {"diff": full_diff, "error": None}
 
     except Exception as e:
-        return {"diff": None, "error": f"Erro ao obter o diff: {str(e)}"}
+        return {"diff": None, "error": (f"Erro ao obter o diff: {str(e)}" if language == "pt" else f"Error getting diff: {str(e)}")}
 
 
 async def analyze_code_node(state: GraphState) -> dict:
-    print("Analisando o código...")
+    language = state["config"].get("language", "pt")
+    print("Analisando o código..." if language == "pt" else "Analyzing the code...")
 
     if not state.get("diff"):
         return {"analysis": None}
@@ -147,30 +171,43 @@ async def analyze_code_node(state: GraphState) -> dict:
 
 
 async def generate_improvements_node(state: GraphState) -> dict:
-    print("Gerando sugestões de melhorias...\n")
+    language = state["config"].get("language", "pt")
+    print("Gerando sugestões de melhorias...\n" if language == "pt" else "Generating improvement suggestions...\n")
 
     if not state["analysis"] or not state["diff"]:
         return {"patch": None}
 
+    truncated_analysis = state["analysis"][:4000]
+
     try:
         agent = LLMProvider.create(state["config"], "generate_improvements")
 
+        message_content = (
+            "Gerar sugestões de melhorias manuais."
+            if language == "pt"
+            else "Generate manual improvement suggestions."
+        )
+
         response = await agent.ainvoke(
             {
-                "messages": [
-                    HumanMessage(content="Gerar sugestões de melhorias manuais.")
-                ],
-                "analysis": state["analysis"],
+                "messages": [HumanMessage(content=message_content)],
+                "analysis": truncated_analysis,
                 "diff": state["diff"],
             }
         )
         new_messages = state["messages"] + [response]
         content = extract_llm_content(response.content)
 
+        colorized_content = colorize_code_blocks(content)
+
+        title = (
+            "📋 SUGESTÕES DE MELHORIAS"
+            if language == "pt"
+            else "📋 IMPROVEMENT SUGGESTIONS"
+        )
         print("\n" + "=" * 70)
-        print("📋 SUGESTÕES DE MELHORIAS")
+        print(title)
         print("=" * 70)
-        print(content)
         print("=" * 70 + "\n")
 
         return {"patch": None, "analysis": content, "messages": new_messages}
@@ -180,7 +217,8 @@ async def generate_improvements_node(state: GraphState) -> dict:
 
 
 async def generate_commit_message_node(state: GraphState) -> dict:
-    print("Gerando mensagem de commit...")
+    language = state["config"].get("language", "pt")
+    print("Gerando mensagem de commit..." if language == "pt" else "Generating commit message...")
 
     if state.get("commit_message"):
         return {}
@@ -196,7 +234,7 @@ async def generate_commit_message_node(state: GraphState) -> dict:
 
         response = await agent.ainvoke(
             {
-                "messages": [HumanMessage(content="Gerar mensagem de commit.")],
+                "messages": [HumanMessage(content="Gerar mensagem de commit." if language == "pt" else "Generate commit message.")],
                 "diff": state["diff"],
                 "lang_instruction": lang_instruction,
             }
@@ -206,11 +244,12 @@ async def generate_commit_message_node(state: GraphState) -> dict:
         return {"commit_message": commit_message.strip(), "messages": new_messages}
 
     except Exception as e:
-        return {"commit_message": None, "error": f"Erro ao gerar commit: {e}"}
+        return {"commit_message": None, "error": (f"Erro ao gerar commit: {e}" if language == "pt" else f"Error generating commit: {e}")}
 
 
 async def apply_patch_node(state: GraphState) -> dict:
-    print("Aplicando o patch gerado...")
+    language = state["config"].get("language", "pt")
+    print("Aplicando o patch gerado..." if language == "pt" else "Applying the generated patch...")
 
     if not state["patch"] or not state["user_confirmation"]:
         return {}
@@ -230,16 +269,17 @@ async def apply_patch_node(state: GraphState) -> dict:
             f.write(patch_content)
 
         repo.git.apply(patch_file)
-        print("Patch aplicado com sucesso.")
+        print("Patch aplicado com sucesso." if language == "pt" else "Patch applied successfully.")
         return {}
     except Exception as e:
-        error_message = f"Erro ao aplicar o patch: {str(e)}"
+        error_message = (f"Erro ao aplicar o patch: {str(e)}" if language == "pt" else f"Error applying patch: {str(e)}")
         print(error_message)
         return {"error": error_message}
 
 
 async def commit_and_push_node(state: GraphState) -> dict:
-    print("Comitando e enviando mudanças...")
+    language = state["config"].get("language", "pt")
+    print("Comitando e enviando mudanças..." if language == "pt" else "Committing and pushing changes...")
 
     if not state["commit_message"] or not state["user_confirmation"]:
         return {}
@@ -256,25 +296,25 @@ async def commit_and_push_node(state: GraphState) -> dict:
             origin = repo.remote(name="origin")
             current_branch = repo.active_branch.name
             origin.push(current_branch)
-            print(f"Mudanças enviadas com sucesso na branch '{current_branch}')")
+            print((f"Mudanças enviadas com sucesso na branch '{current_branch}'" if language == "pt" else f"Changes pushed successfully on branch '{current_branch}'"))
 
         else:
-            print("commit realizado")
+            print("commit realizado" if language == "pt" else "commit done")
         return {}
     except Exception as e:
-        error_message = f"Erro ao commitar: {str(e)}"
+        error_message = (f"Erro ao commitar: {str(e)}" if language == "pt" else f"Error committing: {str(e)}")
         print(error_message)
         return {"error": error_message}
 
 
 async def deep_analyze_critic_node(state: GraphState) -> dict:
+    language = state["config"].get("language", "pt")
     print("\n" + "=" * 60)
-    print("🔴 AGENTE CRÍTICO ANALISANDO")
+    print(f"🔴 {RED}AGENTE CRÍTICO ANALISANDO{RESET}" if language == "pt" else f"🔴 {RED}CRITICAL AGENT ANALYZING{RESET}")
     print("=" * 60)
 
     conversation_history = state.get("conversation_history", [])
     diff = state["diff"]
-    language = state["config"].get("language", "pt")
     messages = []
 
     if not conversation_history:
@@ -299,22 +339,21 @@ async def deep_analyze_critic_node(state: GraphState) -> dict:
         text = extract_llm_content(response.content)
 
         if not text or len(text.strip()) < 10:
-            print(f"⚠️  AVISO: Agente Crítico retornou resposta vazia!")
+            print(f"⚠️  AVISO: Agente Crítico retornou resposta vazia!" if language == "pt" else f"⚠️  WARNING: Critical Agent returned empty response!")
             print(f"Response.content: {response.content}")
-            return {"error": "Agente Crítico não gerou resposta válida"}
+            return {"error": ("Agente Crítico não gerou resposta válida" if language == "pt" else "Critical Agent did not generate a valid response")}
 
-        ai_message = AIMessage(content=text, name="Crítico de Segurança e Padrões")
+        print(text)
 
-        print(f"\033[91m{text[:500]}{'...' if len(text) > 500 else ''}\033[0m")
-        print(f"📊 Tamanho da resposta: {len(text)} caracteres\n")
+        ai_message = AIMessage(content=text, name="Crítico de Segurança e Padrões" if language == "pt" else "Security and Standards Critic")
 
         updated_history = conversation_history + [ai_message]
-        print(f"💾 Histórico atualizado: {len(updated_history)} mensagens\n")
+        print(f"💾 Histórico atualizado: {len(updated_history)} mensagens\n" if language == "pt" else f"💾 History updated: {len(updated_history)} messages\n")
 
         return {"conversation_history": updated_history}
 
     except Exception as e:
-        error_msg = f"Erro no Agente Crítico: {str(e)}"
+        error_msg = (f"Erro no Agente Crítico: {str(e)}" if language == "pt" else f"Error in Critical Agent: {str(e)}")
         print(f"❌ {error_msg}")
         import traceback
 
@@ -323,87 +362,78 @@ async def deep_analyze_critic_node(state: GraphState) -> dict:
 
 
 async def deep_analyze_constructive_node(state: GraphState) -> dict:
+    language = state["config"].get("language", "pt")
     print("\n" + "=" * 60)
-    print("🟢 AGENTE CONSTRUTIVO ANALISANDO")
+    print(f"🟢 {GREEN}AGENTE CONSTRUTIVO ANALISANDO{RESET}" if language == "pt" else f"🟢{GREEN}CONSTRUCTIVE AGENT ANALYZING{RESET}")
     print("=" * 60)
 
     conversation_history = state.get("conversation_history", [])
     diff = state.get("diff", "")
 
     if not conversation_history:
-        print("⚠️  AVISO: Construtivo chamado sem histórico!")
-        return {"error": "Construtivo precisa do Crítico primeiro"}
+        print("⚠️  AVISO: Construtivo chamado sem histórico!" if language == "pt" else "⚠️  WARNING: Constructive called without history!")
+        return {"error": ("Construtivo precisa do Crítico primeiro" if language == "pt" else "Constructive needs Critic first")}
 
     messages = conversation_history.copy()
 
-    language = state["config"].get("language", "pt")
-
     last_critic_msg = ""
     for msg in reversed(messages):
-        if hasattr(msg, "name") and msg.name == "Crítico de Segurança e Padrões":
+        if hasattr(msg, "name") and (msg.name == "Crítico de Segurança e Padrões" or msg.name == "Security and Standards Critic"):
             last_critic_msg = msg.content
             break
 
     if language == "pt":
         prompt = f"""Por favor, analise as preocupações levantadas pelo Crítico e responda de forma construtiva.
 
-Última análise do Crítico:
-{last_critic_msg[:1000] if last_critic_msg else "N/A"}
+            Última análise do Crítico:
+            {last_critic_msg if last_critic_msg else "N/A"}
+            
+            Lembre-se do diff original que estamos discutindo:
+            ```
+            {diff}...
+            ```
 
-Lembre-se do diff original que estamos discutindo:
-```
-{diff[:500]}...
-```
-
-Sua resposta:"""
+            Sua resposta:"""
     else:
         prompt = f"""Please analyze the concerns raised by the Critic and respond constructively.
 
-Last Critic analysis:
-{last_critic_msg[:1000] if last_critic_msg else "N/A"}
-
-Remember the original diff we are discussing:
-```
-{diff[:500]}...
-```
-
-Your response:"""
+            Last Critic analysis:
+            {last_critic_msg if last_critic_msg else "N/A"}
+            
+            Remember the original diff we are discussing:
+            ```
+            {diff}...
+            ```
+            
+            Your response:"""
 
     messages.append(HumanMessage(content=prompt))
 
-    print(f"📋 Total de mensagens enviadas: {len(messages)}")
-    print(
-        f"📏 Tamanho total do histórico: {sum(len(str(m.content)) for m in messages)} caracteres\n"
-    )
+    print(f"📋 Total de mensagens enviadas: {len(messages)}" if language == "pt" else f"📋 Total messages sent: {len(messages)}")
 
     try:
         agent = LLMProvider.create(state["config"], "deep_analyze_constructive")
 
         response = await agent.ainvoke({"messages": messages})
 
-        print(f"🔍 DEBUG - Response type: {type(response)}")
-        print(f"🔍 DEBUG - Response.content type: {type(response.content)}")
-        print(f"🔍 DEBUG - Response.content: {response.content}")
-
         text = extract_llm_content(response.content)
 
         if not text or len(text.strip()) < 10:
-            print(f"⚠️  AVISO: Agente Construtivo retornou resposta vazia!")
+            print(f"⚠️  AVISO: Agente Construtivo retornou resposta vazia!" if language == "pt" else f"⚠️  WARNING: Constructive Agent returned empty response!")
             print(f"Response.content: {response.content}")
-            return {"error": "Agente Construtivo não gerou resposta válida"}
+            return {"error": ("Agente Construtivo não gerou resposta válida" if language == "pt" else "Constructive Agent did not generate a valid response")}
 
-        ai_message = AIMessage(content=text, name="Construtivo de Lógica e Desempenho")
+        print(text)
 
-        print(f"\033[92m{text[:500]}{'...' if len(text) > 500 else ''}\033[0m")
-        print(f"📊 Tamanho da resposta: {len(text)} caracteres\n")
+        ai_message = AIMessage(content=text, name="Construtivo de Lógica e Desempenho" if language == "pt" else "Logic and Performance Constructive")
 
         updated_history = conversation_history + [ai_message]
-        print(f"💾 Histórico atualizado: {len(updated_history)} mensagens\n")
+        print(f"💾 Histórico atualizado: {len(updated_history)} mensagens\n" if language == "pt" else f"💾 History updated: {len(updated_history)} messages\n")
 
         return {"conversation_history": updated_history}
 
     except Exception as e:
-        error_msg = f"Erro no Agente Construtivo: {str(e)}"
+        error_msg = (f"Erro no Agente Construtivo: {str(e)}" if language == "pt" else f"Error in Constructive Agent: {str(e)}")
         print(f"❌ {error_msg}")
         import traceback
 
@@ -412,8 +442,9 @@ Your response:"""
 
 
 async def deep_generate_improvements_node(state: GraphState) -> dict:
+    language = state["config"].get("language", "pt")
     print("\n" + "=" * 60)
-    print("🔧 GERANDO PLANO DE AÇÃO E PATCH")
+    print("🔧 GERANDO PLANO DE AÇÃO E PATCH" if language == "pt" else "🔧 GENERATING ACTION PLAN AND PATCH")
     print("=" * 60 + "\n")
     conversation_history = state.get("conversation_history", [])
 
@@ -422,25 +453,35 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
 
     conversation_text = "\n\n".join(
         [
-            f"**{msg.name if hasattr(msg, 'name') else 'Agente'}**:\n{msg.content}"
+            f"**{msg.name if hasattr(msg, 'name') else ('Agente' if language == 'pt' else 'Agent')}**:\n{msg.content}"
             for msg in conversation_history
         ]
     )
-    final_analysis = f"""=== DISCUSSÃO COMPLETA ENTRE OS AGENTES ===
+    
+    if language == "pt":
+        final_analysis = f"""=== DISCUSSÃO COMPLETA ENTRE OS AGENTES ===
 
     {conversation_text}
 
     === FIM DA DISCUSSÃO ===
 
     Com base nesta discussão profunda, gere um RELATÓRIO EXECUTIVO detalhado."""
+    else:
+        final_analysis = f"""=== FULL DISCUSSION BETWEEN AGENTS ===
+
+    {conversation_text}
+
+    === END OF DISCUSSION ===
+
+    Based on this in-depth discussion, generate a detailed EXECUTIVE REPORT."""
     try:
-        print("📊 Gerando relatório executivo da análise...\n")
+        print("📊 Gerando relatório executivo da análise...\n" if language == "pt" else "📊 Generating executive analysis report...\n")
         agent = LLMProvider.create(state["config"], "executive_report")
         response = await agent.ainvoke(
             {
                 "messages": [
                     HumanMessage(
-                        content="Gerar relatório executivo com base na discussão."
+                        content="Gerar relatório executivo com base na discussão." if language == "pt" else "Generate executive report based on discussion."
                     )
                 ],
                 "analysis": final_analysis,
@@ -451,17 +492,17 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
         content = extract_llm_content(response.content)
 
         if not content or len(content.strip()) < 10:
-            print("⚠️  LLM retornou resposta vazia ou muito curta!")
+            print("⚠️  LLM retornou resposta vazia ou muito curta!" if language == "pt" else "⚠️  LLM returned empty or very short response!")
             return {
                 "patch": None,
-                "analysis": "Não foi possível gerar o relatório executivo.",
+                "analysis": ("Não foi possível gerar o relatório executivo." if language == "pt" else "Could not generate executive report."),
                 "messages": state.get("messages", []) + [response],
             }
 
         colorized_content = colorize_code_blocks(content)
 
         print("\n" + "=" * 80)
-        print("📊 RELATÓRIO EXECUTIVO - ANÁLISE PROFUNDA")
+        print("📊 RELATÓRIO EXECUTIVO - ANÁLISE PROFUNDA" if language == "pt" else "📊 EXECUTIVE REPORT - DEEP ANALYSIS")
         print("=" * 80)
         print(colorized_content)
         print("=" * 80 + "\n")
@@ -472,7 +513,7 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
             "messages": state.get("messages", []) + [response],
         }
     except Exception as e:
-        error_msg = f"Erro ao gerar melhorias: {str(e)}"
+        error_msg = (f"Erro ao gerar melhorias: {str(e)}" if language == "pt" else f"Error generating improvements: {str(e)}")
         print(f"❌ {error_msg}")
         traceback.print_exc()
         return {"patch": None, "analysis": None, "error": error_msg}

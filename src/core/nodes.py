@@ -8,7 +8,6 @@ import git
 import json
 from src.providers.llm_providers import LLMProvider
 
-# ANSI color codes
 RED = "\033[91m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
@@ -208,6 +207,7 @@ async def generate_improvements_node(state: GraphState) -> dict:
         print("\n" + "=" * 70)
         print(title)
         print("=" * 70)
+        print(colorized_content)
         print("=" * 70 + "\n")
 
         return {"patch": None, "analysis": content, "messages": new_messages}
@@ -295,11 +295,30 @@ async def commit_and_push_node(state: GraphState) -> dict:
         if state["config"].get("auto_push", True):
             origin = repo.remote(name="origin")
             current_branch = repo.active_branch.name
-            origin.push(current_branch)
-            print((f"Mudanças enviadas com sucesso na branch '{current_branch}'" if language == "pt" else f"Changes pushed successfully on branch '{current_branch}'"))
+
+            push_info = origin.push(current_branch)
+
+            if push_info and len(push_info) > 0:
+                info = push_info[0]
+
+                if info.flags & (info.ERROR | info.REJECTED | info.REMOTE_REJECTED):
+                    error_msg = (
+                        f"❌ Push rejeitado na branch '{current_branch}'.\n"
+                        f"   Motivo: {info.summary if hasattr(info, 'summary') else 'Branch divergiu do remoto'}\n"
+                        f"   💡 Solução: Execute 'git pull --rebase' ou 'git pull' antes de fazer push."
+                        if language == "pt"
+                        else
+                        f"❌ Push rejected on branch '{current_branch}'.\n"
+                        f"   Reason: {info.summary if hasattr(info, 'summary') else 'Branch diverged from remote'}\n"
+                        f"   💡 Solution: Run 'git pull --rebase' or 'git pull' before pushing."
+                    )
+                    print(error_msg)
+                    return {"error": error_msg}
+
+            print((f"✅ Mudanças enviadas com sucesso na branch '{current_branch}'" if language == "pt" else f"✅ Changes pushed successfully on branch '{current_branch}'"))
 
         else:
-            print("commit realizado" if language == "pt" else "commit done")
+            print("✅ Commit realizado (push desabilitado)" if language == "pt" else "✅ Commit done (push disabled)")
         return {}
     except Exception as e:
         error_message = (f"Erro ao commitar: {str(e)}" if language == "pt" else f"Error committing: {str(e)}")

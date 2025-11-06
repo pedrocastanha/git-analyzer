@@ -8,34 +8,42 @@ class AgentManager:
     def get_analyzer_agent(model: str, config: dict):
         llm = LLMManager.get_llm(model, config)
         llm_with_tools = llm.bind_tools(tools_analyzer)
-        return ChainManager.get_analyzer_chain(llm_with_tools)
+        language = config.get("language", "pt")
+        return ChainManager.get_analyzer_chain(llm_with_tools, language)
 
     @staticmethod
     def get_generate_improvements_agent(model: str, config: dict):
         llm = LLMManager.get_llm(model, config)
         llm_with_tools = llm.bind_tools(tools_analyzer)
-        return ChainManager.get_generate_improvements_chain(llm_with_tools)
+        language = config.get("language", "pt")
+        return ChainManager.get_generate_improvements_chain(llm_with_tools, language)
 
     @staticmethod
     def get_generate_commit_message_agent(model: str, config: dict):
         llm = LLMManager.get_llm(model, config)
         llm_with_tools = llm.bind_tools(tools_analyzer)
-        return ChainManager.get_generate_commit_message_chain(llm_with_tools)
+        language = config.get("language", "pt")
+        return ChainManager.get_generate_commit_message_chain(llm_with_tools, language)
 
     @staticmethod
     def get_deep_analyze_critic_agent(model: str, config: dict):
         llm = LLMManager.get_llm(model, config)
         llm_with_tools = llm.bind_tools(tools_analyzer)
-        return ChainManager.get_deep_analyze_critic_chain(llm_with_tools)
+        language = config.get("language", "pt")
+        return ChainManager.get_deep_analyze_critic_chain(llm_with_tools, language)
 
     @staticmethod
     def get_deep_analyze_constructive_agent(model: str, config: dict):
         llm = LLMManager.get_llm(model, config)
         llm_with_tools = llm.bind_tools(tools_analyzer)
-        return ChainManager.get_deep_analyze_constructive_chain(llm_with_tools)
+        language = config.get("language", "pt")
+        return ChainManager.get_deep_analyze_constructive_chain(
+            llm_with_tools, language
+        )
 
     @staticmethod
     def get_executive_report_agent(model: str, config: dict):
         llm = LLMManager.get_llm(model, config)
         llm_with_tools = llm.bind_tools(tools_analyzer)
-        return ChainManager.get_executive_report_chain(llm_with_tools)
+        language = config.get("language", "pt")
+        return ChainManager.get_executive_report_chain(llm_with_tools, language)

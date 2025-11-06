@@ -17,8 +17,9 @@ def route_after_diff(state: GraphState):
     else:
         return "end"
 
+
 def route_deep_analysis(state: GraphState):
-    if state.get('error'):
+    if state.get("error"):
         print(f"❌ Erro detectado: {state['error']}")
         print("Abortando discussão...\n")
         return "deep_generate_improvements"
@@ -30,10 +31,16 @@ def route_deep_analysis(state: GraphState):
         return "deep_generate_improvements"
 
     if len(conversation_history) >= 2:
-        critic_messages = [msg for msg in conversation_history
-                          if hasattr(msg, 'name') and msg.name == "Crítico de Segurança e Padrões"]
-        constructive_messages = [msg for msg in conversation_history
-                                if hasattr(msg, 'name') and msg.name == "Construtivo de Lógica e Desempenho"]
+        critic_messages = [
+            msg
+            for msg in conversation_history
+            if hasattr(msg, "name") and msg.name == "Crítico de Segurança e Padrões"
+        ]
+        constructive_messages = [
+            msg
+            for msg in conversation_history
+            if hasattr(msg, "name") and msg.name == "Construtivo de Lógica e Desempenho"
+        ]
 
         if critic_messages and constructive_messages:
             last_critic = critic_messages[-1]
@@ -51,7 +58,7 @@ def route_deep_analysis(state: GraphState):
 
     last_message = conversation_history[-1] if conversation_history else None
 
-    if last_message and hasattr(last_message, 'name'):
+    if last_message and hasattr(last_message, "name"):
         agent_name = last_message.name
         print(f"🔄 Último agente: {agent_name}")
 

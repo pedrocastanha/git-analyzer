@@ -45,3 +45,8 @@ class AgentManager:
         llm_with_tools = llm.bind_tools(tools_analyzer)
         language = config.get("language", "pt")
         return ChainManager.get_executive_report_chain(llm_with_tools, language)
+
+    @staticmethod
+    def get_refine_commit_message_agent(model: str, config: dict):
+        llm = LLMManager.get_llm(model, config)
+        return llm

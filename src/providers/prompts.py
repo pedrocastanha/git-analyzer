@@ -6,6 +6,7 @@ from src.messages import (
     GenerateCommitMessageSystemPrompt,
     DeepAnalyzeCriticSystemPrompt,
     DeepAnalyzeConstructiveSystemPrompt,
+    RefineCommitMessageSystemPrompt,
     ExecutiveReportSystemPrompt,
 )
 
@@ -60,6 +61,11 @@ class PromptManager:
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
+
+    @staticmethod
+    def get_refine_commit_message_prompt(language="pt"):
+        prompt_text = RefineCommitMessageSystemPrompt.get(language)
+        return ChatPromptTemplate.from_template(prompt_text)
 
     @staticmethod
     def get_executive_report_prompt(language="pt"):

@@ -109,7 +109,6 @@ class GitAIAgent:
         YELLOW = "\033[93m"
         RESET = "\033[0m"
 
-        # Loop de refinamento da mensagem de commit
         while True:
             print(f"\n✅ " + ("Mensagem de commit:" if language == "pt" else "Commit message:"))
             print(f"   {GREEN}{result['commit_message']}{RESET}\n")
@@ -124,7 +123,6 @@ class GitAIAgent:
                 await self.graph.ainvoke(result)
                 break
             elif confirm in ["n", "no", "não", "nao"]:
-                # Perguntar se quer sugerir melhorias
                 if language == "pt":
                     want_suggestion = input("\nDeseja sugerir melhorias na mensagem? (s/n): ").strip().lower()
                 else:
@@ -140,7 +138,6 @@ class GitAIAgent:
                         print("⚠️  " + ("Sugestão vazia. Cancelando..." if language == "pt" else "Empty suggestion. Cancelling..."))
                         break
 
-                    # Refinar mensagem com base na sugestão
                     result = await self._refine_commit_message(result, suggestion)
 
                     if result.get("error"):
@@ -153,65 +150,28 @@ class GitAIAgent:
                 print("⚠️  " + ("Opção inválida. Digite 's' para sim ou 'n' para não." if language == "pt" else "Invalid option. Type 'y' for yes or 'n' for no."))
 
     async def _refine_commit_message(self, current_state: dict, suggestion: str) -> dict:
-        """Refina a mensagem de commit com base na sugestão do usuário"""
-        from src.providers.llm_providers import LLMProvider
-        from langchain_core.messages import HumanMessage
+        from src.providers.chains import ChainManager
+        from src.providers.llms import LLMManager
+        from src.core.nodes import extract_llm_content
 
         language = self.config_manager.get("language", "pt")
 
         print("\n🔄 " + ("Refinando mensagem de commit..." if language == "pt" else "Refining commit message..."))
 
         try:
-            llm = LLMProvider.create(current_state["config"], "refine_commit_message")
+            provider = current_state["config"].get("ai_provider", "gemini")
+            llm = LLMManager.get_llm(provider, current_state["config"])
+            chain = ChainManager.get_refine_commit_message_chain(llm, language)
 
-            if language == "pt":
-                prompt = f"""Você precisa refinar uma mensagem de commit com base em uma sugestão do usuário.
+            response = await chain.ainvoke({
+                "current_message": current_state['commit_message'],
+                "user_suggestion": suggestion,
+                "diff": current_state['diff'][:3000]
+            })
 
-Mensagem de commit atual:
-{current_state['commit_message']}
-
-Sugestão do usuário:
-{suggestion}
-
-Diff original:
-{current_state['diff'][:3000]}
-
-IMPORTANTE:
-- Mantenha a mensagem concisa (máximo 72 caracteres)
-- Siga o formato Conventional Commits
-- Incorpore a sugestão do usuário
-- Retorne APENAS a nova mensagem de commit, sem explicações
-
-Nova mensagem de commit:"""
-            else:
-                prompt = f"""You need to refine a commit message based on a user's suggestion.
-
-Current commit message:
-{current_state['commit_message']}
-
-User's suggestion:
-{suggestion}
-
-Original diff:
-{current_state['diff'][:3000]}
-
-IMPORTANT:
-- Keep the message concise (maximum 72 characters)
-- Follow Conventional Commits format
-- Incorporate the user's suggestion
-- Return ONLY the new commit message, without explanations
-
-New commit message:"""
-
-            response = await llm.ainvoke([HumanMessage(content=prompt)])
-
-            from src.core.nodes import extract_llm_content
             refined_message = extract_llm_content(response.content).strip()
-
-            # Remove possíveis quotes ou aspas
             refined_message = refined_message.strip('"').strip("'")
 
-            # Atualiza o estado com a nova mensagem
             current_state["commit_message"] = refined_message
             return current_state
 

@@ -500,7 +500,7 @@ class SplitDiffSystemPrompt:
             - Separe features de fixes de documentação
             - Máximo 5 arquivos por commit (idealmente menos)
             - Se o diff for pequeno (<3 arquivos), pode ser 1 commit só
-            - A mensagem deve ser em inglês
+            - A mensagem deve ser *sempre* em inglês
             
             **IMPORTANTE:** Retorne APENAS o JSON, sem texto adicional."""
 

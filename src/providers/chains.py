@@ -42,3 +42,8 @@ class ChainManager:
     def get_executive_report_chain(llm_with_tools, language):
         executive_report_prompt = PromptManager.get_executive_report_prompt(language)
         return executive_report_prompt | llm_with_tools
+
+    @staticmethod
+    def get_split_diff_chain(llm_with_tools, language):
+        split_diff_prompt = PromptManager.get_split_diff_prompt(language)
+        return split_diff_prompt | llm_with_tools

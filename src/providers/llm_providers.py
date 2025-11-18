@@ -20,5 +20,7 @@ class LLMProvider:
             return AgentManager.get_executive_report_agent(provider, config)
         elif type == "refine_commit_message":
             return AgentManager.get_refine_commit_message_agent(provider, config)
+        elif type == "split_diff":
+            return AgentManager.get_split_diff_agent(provider, config)
         elif type == "up":
             return AgentManager.get_analyzer_agent(provider, config)

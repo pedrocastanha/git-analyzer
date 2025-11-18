@@ -14,3 +14,4 @@ class GraphState(TypedDict):
     repo_path: str
     config: dict
     conversation_history: Annotated[list, add_messages]
+    split_commits: list[dict] | None

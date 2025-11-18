@@ -536,3 +536,171 @@ async def deep_generate_improvements_node(state: GraphState) -> dict:
         print(f"❌ {error_msg}")
         traceback.print_exc()
         return {"patch": None, "analysis": None, "error": error_msg}
+
+
+async def split_diff_node(state: GraphState) -> dict:
+    """Analisa o diff e divide em grupos lógicos de mudanças."""
+    language = state["config"].get("language", "pt")
+    print("\n🔍 " + ("Analisando mudanças para dividir em commits lógicos..." if language == "pt" else "Analyzing changes to split into logical commits..."))
+    
+    if not state.get("diff"):
+        return {"error": ("Nenhum diff disponível para análise" if language == "pt" else "No diff available for analysis")}
+    
+    try:
+        agent = LLMProvider.create(state["config"], "split_diff")
+        
+        prompt = (
+            f"Analise o seguinte diff e agrupe as mudanças em commits lógicos:\n\n{state['diff']}"
+            if language == "pt"
+            else f"Analyze the following diff and group changes into logical commits:\n\n{state['diff']}"
+        )
+        
+        response = await agent.ainvoke({
+            "messages": [HumanMessage(content=prompt)],
+            "diff": state["diff"]
+        })
+        
+        content = extract_llm_content(response.content)
+        
+        # Tentar extrair JSON da resposta
+        groups = extract_json_from_llm_output(content)
+        
+        if not groups or not isinstance(groups, dict) or "commits" not in groups:
+            print("⚠️  " + ("LLM não retornou formato esperado" if language == "pt" else "LLM did not return expected format"))
+            return {"error": ("Não foi possível dividir o diff automaticamente" if language == "pt" else "Could not automatically split the diff")}
+        
+        commits = groups["commits"]
+        
+        print(f"\n✅ " + (f"Identificados {len(commits)} commits lógicos:" if language == "pt" else f"Identified {len(commits)} logical commits:"))
+        for i, commit in enumerate(commits, 1):
+            files_str = ", ".join(commit.get("files", []))
+            print(f"  {i}. {commit.get('type', 'change')}: {files_str}")
+        
+        return {"split_commits": commits, "messages": state.get("messages", []) + [response]}
+    
+    except Exception as e:
+        error_msg = (f"Erro ao dividir diff: {str(e)}" if language == "pt" else f"Error splitting diff: {str(e)}")
+        print(f"❌ {error_msg}")
+        traceback.print_exc()
+        return {"error": error_msg}
+
+
+async def generate_split_commits_node(state: GraphState) -> dict:
+    """Gera mensagens de commit para cada grupo de mudanças."""
+    language = state["config"].get("language", "pt")
+    print("\n📝 " + ("Gerando mensagens de commit..." if language == "pt" else "Generating commit messages..."))
+    
+    if not state.get("split_commits"):
+        return {"error": ("Nenhum grupo de commits disponível" if language == "pt" else "No commit groups available")}
+    
+    try:
+        agent = LLMProvider.create(state["config"], "generate_commit_message")
+        
+        commits_with_messages = []
+        
+        for i, commit_group in enumerate(state["split_commits"], 1):
+            files = commit_group.get("files", [])
+            change_type = commit_group.get("type", "change")
+            description = commit_group.get("description", "")
+            
+            lang_instruction = "em português" if language == "pt" else "in English"
+            
+            prompt = (
+                f"Gere uma mensagem de commit (conventional commits, máx 72 chars) para:\n"
+                f"Tipo: {change_type}\n"
+                f"Arquivos: {', '.join(files)}\n"
+                f"Descrição: {description}\n"
+                f"Idioma: {lang_instruction}"
+                if language == "pt"
+                else
+                f"Generate a commit message (conventional commits, max 72 chars) for:\n"
+                f"Type: {change_type}\n"
+                f"Files: {', '.join(files)}\n"
+                f"Description: {description}\n"
+                f"Language: {lang_instruction}"
+            )
+            
+            response = await agent.ainvoke({
+                "messages": [HumanMessage(content=prompt)],
+                "diff": f"Files: {', '.join(files)}\nType: {change_type}",
+                "lang_instruction": lang_instruction
+            })
+            
+            commit_message = extract_llm_content(response.content).strip()
+            commit_message = commit_message.strip('"').strip("'")
+            
+            commits_with_messages.append({
+                "message": commit_message,
+                "files": files,
+                "type": change_type,
+                "description": description
+            })
+            
+            print(f"  ✓ Commit {i}: {commit_message}")
+        
+        return {"split_commits": commits_with_messages}
+    
+    except Exception as e:
+        error_msg = (f"Erro ao gerar mensagens: {str(e)}" if language == "pt" else f"Error generating messages: {str(e)}")
+        print(f"❌ {error_msg}")
+        traceback.print_exc()
+        return {"error": error_msg}
+
+
+async def execute_split_commits_node(state: GraphState) -> dict:
+    """Executa os commits divididos após confirmação do usuário."""
+    language = state["config"].get("language", "pt")
+    
+    if not state.get("user_confirmation") or not state.get("split_commits"):
+        return {}
+    
+    print("\n🚀 " + ("Executando commits..." if language == "pt" else "Executing commits..."))
+    
+    try:
+        repo = git.Repo(state["repo_path"])
+        
+        for i, commit_info in enumerate(state["split_commits"], 1):
+            files = commit_info["files"]
+            message = commit_info["message"]
+            
+            # Stage apenas os arquivos deste commit
+            for file_path in files:
+                try:
+                    repo.git.add(file_path)
+                except Exception as e:
+                    print(f"⚠️  " + (f"Aviso ao adicionar {file_path}: {str(e)}" if language == "pt" else f"Warning adding {file_path}: {str(e)}"))
+            
+            # Fazer o commit
+            repo.index.commit(message)
+            print(f"  ✅ Commit {i}/{len(state['split_commits'])}: {message}")
+        
+        # Push se configurado
+        if state["config"].get("auto_push", True):
+            origin = repo.remote(name="origin")
+            current_branch = repo.active_branch.name
+            
+            print(f"\n📤 " + (f"Enviando para {current_branch}..." if language == "pt" else f"Pushing to {current_branch}..."))
+            push_info = origin.push(current_branch)
+            
+            if push_info and len(push_info) > 0:
+                info = push_info[0]
+                if info.flags & (info.ERROR | info.REJECTED | info.REMOTE_REJECTED):
+                    error_msg = (
+                        f"❌ Push rejeitado. Execute 'git pull --rebase' antes."
+                        if language == "pt"
+                        else f"❌ Push rejected. Run 'git pull --rebase' first."
+                    )
+                    print(error_msg)
+                    return {"error": error_msg}
+            
+            print("✅ " + ("Todos os commits enviados com sucesso!" if language == "pt" else "All commits pushed successfully!"))
+        else:
+            print("✅ " + ("Commits realizados (push desabilitado)" if language == "pt" else "Commits done (push disabled)"))
+        
+        return {}
+    
+    except Exception as e:
+        error_msg = (f"Erro ao executar commits: {str(e)}" if language == "pt" else f"Error executing commits: {str(e)}")
+        print(f"❌ {error_msg}")
+        traceback.print_exc()
+        return {"error": error_msg}

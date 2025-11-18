@@ -459,3 +459,93 @@ class ExecutiveReportSystemPrompt:
         return getattr(
             ExecutiveReportSystemPrompt, language.upper(), ExecutiveReportSystemPrompt.PT
         )
+
+
+class SplitDiffSystemPrompt:
+    PT = """Você é um especialista em organização de commits Git. Analise o diff e divida as mudanças em commits lógicos.
+            **Diff:**
+            {diff}
+            
+            **SUA TAREFA:**
+            Agrupe as mudanças em commits lógicos baseado em:
+            1. **Coesão funcional**: Mudanças que fazem sentido juntas
+            2. **Tipo de mudança**: features, fixes, docs, refactorings separados
+            3. **Arquivos relacionados**: Arquivos que trabalham juntos
+            
+            **FORMATO DE RETORNO (JSON):**
+            Retorne APENAS um JSON válido no formato:
+            ```json
+            {
+              "commits": [
+                {
+                  "type": "feat",
+                  "files": ["src/auth.py", "src/models/user.py"],
+                  "description": "Adiciona autenticação de usuário"
+                },
+                {
+                  "type": "docs",
+                  "files": ["README.md"],
+                  "description": "Atualiza documentação"
+                }
+              ]
+            }
+            ```
+            
+            **TIPOS DISPONÍVEIS:**
+            feat, fix, docs, style, refactor, perf, test, build, ci, chore
+            
+            **REGRAS:**
+            - Cada commit deve ter um propósito claro
+            - Agrupe arquivos relacionados funcionalmente
+            - Separe features de fixes de documentação
+            - Máximo 5 arquivos por commit (idealmente menos)
+            - Se o diff for pequeno (<3 arquivos), pode ser 1 commit só
+            
+            **IMPORTANTE:** Retorne APENAS o JSON, sem texto adicional."""
+
+    EN = """You are a Git commit organization expert. Analyze the diff and divide changes into logical commits.
+            **Diff:**
+            {diff}
+            
+            **YOUR TASK:**
+            Group changes into logical commits based on:
+            1. **Functional cohesion**: Changes that make sense together
+            2. **Change type**: features, fixes, docs, refactorings separated
+            3. **Related files**: Files that work together
+            
+            **RETURN FORMAT (JSON):**
+            Return ONLY valid JSON in this format:
+            ```json
+            {
+              "commits": [
+                {
+                  "type": "feat",
+                  "files": ["src/auth.py", "src/models/user.py"],
+                  "description": "Add user authentication"
+                },
+                {
+                  "type": "docs",
+                  "files": ["README.md"],
+                  "description": "Update documentation"
+                }
+              ]
+            }
+            ```
+            
+            **AVAILABLE TYPES:**
+            feat, fix, docs, style, refactor, perf, test, build, ci, chore
+            
+            **RULES:**
+            - Each commit should have a clear purpose
+            - Group functionally related files
+            - Separate features from fixes from documentation
+            - Maximum 5 files per commit (ideally fewer)
+            - If diff is small (<3 files), can be 1 commit only
+            
+            **IMPORTANT:** Return ONLY the JSON, no additional text."""
+
+    @staticmethod
+    def get(language="pt"):
+        return getattr(
+            SplitDiffSystemPrompt, language.upper(), SplitDiffSystemPrompt.PT
+        )

@@ -557,7 +557,8 @@ async def split_diff_node(state: GraphState) -> dict:
         
         response = await agent.ainvoke({
             "messages": [HumanMessage(content=prompt)],
-            "diff": state["diff"]
+            "diff": state["diff"],
+            "commits": [],
         })
         
         content = extract_llm_content(response.content)

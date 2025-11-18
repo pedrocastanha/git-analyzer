@@ -475,20 +475,20 @@ class SplitDiffSystemPrompt:
             **FORMATO DE RETORNO (JSON):**
             Retorne APENAS um JSON válido no formato:
             ```json
-            {
+            {{
               "commits": [
-                {
+                {{
                   "type": "feat",
                   "files": ["src/auth.py", "src/models/user.py"],
                   "description": "Adiciona autenticação de usuário"
-                },
-                {
+                }},
+                {{
                   "type": "docs",
                   "files": ["README.md"],
                   "description": "Atualiza documentação"
-                }
+                }}
               ]
-            }
+            }}
             ```
             
             **TIPOS DISPONÍVEIS:**
@@ -516,20 +516,20 @@ class SplitDiffSystemPrompt:
             **RETURN FORMAT (JSON):**
             Return ONLY valid JSON in this format:
             ```json
-            {
+            {{
               "commits": [
-                {
+                {{
                   "type": "feat",
                   "files": ["src/auth.py", "src/models/user.py"],
                   "description": "Add user authentication"
-                },
-                {
+                }},
+                {{
                   "type": "docs",
                   "files": ["README.md"],
                   "description": "Update documentation"
-                }
+                }}
               ]
-            }
+            }}
             ```
             
             **AVAILABLE TYPES:**

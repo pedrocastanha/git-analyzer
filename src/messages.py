@@ -480,12 +480,12 @@ class SplitDiffSystemPrompt:
                 {{
                   "type": "feat",
                   "files": ["src/auth.py", "src/models/user.py"],
-                  "description": "Adiciona autenticação de usuário"
+                  "description": "add user authentication"
                 }},
                 {{
                   "type": "docs",
                   "files": ["README.md"],
-                  "description": "Atualiza documentação"
+                  "description": "att documentation for improve clarity"
                 }}
               ]
             }}
@@ -500,6 +500,7 @@ class SplitDiffSystemPrompt:
             - Separe features de fixes de documentação
             - Máximo 5 arquivos por commit (idealmente menos)
             - Se o diff for pequeno (<3 arquivos), pode ser 1 commit só
+            - A mensagem deve ser em inglês
             
             **IMPORTANTE:** Retorne APENAS o JSON, sem texto adicional."""
 

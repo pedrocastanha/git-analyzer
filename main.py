@@ -160,7 +160,6 @@ class GitAIAgent:
         
         from src.core.nodes import get_diff_node, split_diff_node, generate_split_commits_node, execute_split_commits_node
         
-        # 1. Obter o diff
         state = {
             "messages": [],
             "diff": None,
@@ -177,21 +176,18 @@ class GitAIAgent:
             print(f"\n❌ {state.get('error', 'No diff found')}")
             return
         
-        # 2. Dividir o diff em grupos
         state = {**state, **(await split_diff_node(state))}
         
         if state.get("error") or not state.get("split_commits"):
             print(f"\n❌ {state.get('error', 'Could not split diff')}")
             return
         
-        # 3. Gerar mensagens de commit para cada grupo
         state = {**state, **(await generate_split_commits_node(state))}
         
         if state.get("error"):
             print(f"\n❌ {state['error']}")
             return
         
-        # 4. Mostrar preview e pedir confirmação
         print("\n📋 " + ("Commits propostos:" if language == "pt" else "Proposed commits:"))
         print("=" * 60)
         
@@ -210,7 +206,6 @@ class GitAIAgent:
             print("❌ " + ("Operação cancelada." if language == "pt" else "Operation cancelled."))
             return
         
-        # 5. Executar os commits
         state["user_confirmation"] = True
         state = {**state, **(await execute_split_commits_node(state))}
         

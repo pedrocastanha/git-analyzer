@@ -603,28 +603,19 @@ async def generate_split_commits_node(state: GraphState) -> dict:
             files = commit_group.get("files", [])
             change_type = commit_group.get("type", "change")
             description = commit_group.get("description", "")
-            
-            lang_instruction = "em português" if language == "pt" else "in English"
-            
+
+            # Always generate commit messages in English
             prompt = (
-                f"Gere uma mensagem de commit (conventional commits, máx 72 chars) para:\n"
-                f"Tipo: {change_type}\n"
-                f"Arquivos: {', '.join(files)}\n"
-                f"Descrição: {description}\n"
-                f"Idioma: {lang_instruction}"
-                if language == "pt"
-                else
                 f"Generate a commit message (conventional commits, max 72 chars) for:\n"
                 f"Type: {change_type}\n"
                 f"Files: {', '.join(files)}\n"
                 f"Description: {description}\n"
-                f"Language: {lang_instruction}"
+                f"IMPORTANT: The commit message MUST be in English."
             )
             
             response = await agent.ainvoke({
                 "messages": [HumanMessage(content=prompt)],
-                "diff": f"Files: {', '.join(files)}\nType: {change_type}",
-                "lang_instruction": lang_instruction
+                "diff": f"Files: {', '.join(files)}\nType: {change_type}"
             })
             
             commit_message = extract_llm_content(response.content).strip()
@@ -664,37 +655,43 @@ async def execute_split_commits_node(state: GraphState) -> dict:
             files = commit_info["files"]
             message = commit_info["message"]
             
-            # Stage apenas os arquivos deste commit
             for file_path in files:
                 try:
                     repo.git.add(file_path)
                 except Exception as e:
                     print(f"⚠️  " + (f"Aviso ao adicionar {file_path}: {str(e)}" if language == "pt" else f"Warning adding {file_path}: {str(e)}"))
             
-            # Fazer o commit
             repo.index.commit(message)
             print(f"  ✅ Commit {i}/{len(state['split_commits'])}: {message}")
         
-        # Push se configurado
         if state["config"].get("auto_push", True):
-            origin = repo.remote(name="origin")
-            current_branch = repo.active_branch.name
-            
-            print(f"\n📤 " + (f"Enviando para {current_branch}..." if language == "pt" else f"Pushing to {current_branch}..."))
-            push_info = origin.push(current_branch)
-            
-            if push_info and len(push_info) > 0:
-                info = push_info[0]
-                if info.flags & (info.ERROR | info.REJECTED | info.REMOTE_REJECTED):
-                    error_msg = (
-                        f"❌ Push rejeitado. Execute 'git pull --rebase' antes."
-                        if language == "pt"
-                        else f"❌ Push rejected. Run 'git pull --rebase' first."
-                    )
-                    print(error_msg)
-                    return {"error": error_msg}
-            
-            print("✅ " + ("Todos os commits enviados com sucesso!" if language == "pt" else "All commits pushed successfully!"))
+            try:
+                origin = repo.remote(name="origin")
+                current_branch = repo.active_branch.name
+
+                print(f"\n📤 " + (f"Enviando para {current_branch}..." if language == "pt" else f"Pushing to {current_branch}..."))
+                push_info = origin.push(current_branch)
+
+                if push_info and len(push_info) > 0:
+                    info = push_info[0]
+                    if info.flags & (info.ERROR | info.REJECTED | info.REMOTE_REJECTED):
+                        error_msg = (
+                            f"❌ Push rejected. Run 'git pull --rebase' first."
+                            if language == "en"
+                            else f"❌ Push rejeitado. Execute 'git pull --rebase' antes."
+                        )
+                        print(error_msg)
+                        return {"error": error_msg}
+                    elif info.flags & info.UP_TO_DATE:
+                        print("✅ " + ("Branch already up to date" if language == "en" else "Branch já está atualizado"))
+                    else:
+                        print("✅ " + ("All commits pushed successfully!" if language == "en" else "Todos os commits enviados com sucesso!"))
+                else:
+                    print("⚠️  " + ("Push returned no info (might have failed silently)" if language == "en" else "Push não retornou informação (pode ter falhado silenciosamente)"))
+            except Exception as push_error:
+                error_msg = (f"Push error: {str(push_error)}" if language == "en" else f"Erro no push: {str(push_error)}")
+                print(f"❌ {error_msg}")
+                return {"error": error_msg}
         else:
             print("✅ " + ("Commits realizados (push desabilitado)" if language == "pt" else "Commits done (push disabled)"))
         

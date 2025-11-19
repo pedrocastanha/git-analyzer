@@ -500,8 +500,8 @@ class SplitDiffSystemPrompt:
             - Separe features de fixes de documentação
             - Máximo 5 arquivos por commit (idealmente menos)
             - Se o diff for pequeno (<3 arquivos), pode ser 1 commit só
-            - A mensagem deve ser *sempre* em inglês
-            
+            - A descrição (description) deve ser SEMPRE em inglês
+
             **IMPORTANTE:** Retorne APENAS o JSON, sem texto adicional."""
 
     EN = """You are a Git commit organization expert. Analyze the diff and divide changes into logical commits.
@@ -542,7 +542,8 @@ class SplitDiffSystemPrompt:
             - Separate features from fixes from documentation
             - Maximum 5 files per commit (ideally fewer)
             - If diff is small (<3 files), can be 1 commit only
-            
+            - Description must ALWAYS be in English
+
             **IMPORTANT:** Return ONLY the JSON, no additional text."""
 
     @staticmethod

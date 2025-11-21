@@ -542,28 +542,59 @@ async def split_diff_node(state: GraphState) -> dict:
     """Analisa o diff e divide em grupos lógicos de mudanças."""
     language = state["config"].get("language", "pt")
     print("\n🔍 " + ("Analisando mudanças para dividir em commits lógicos..." if language == "pt" else "Analyzing changes to split into logical commits..."))
-    
+
     if not state.get("diff"):
         return {"error": ("Nenhum diff disponível para análise" if language == "pt" else "No diff available for analysis")}
-    
+
     try:
+        repo = git.Repo(state["repo_path"])
+
+        diff_stat_staged = repo.git.diff("--stat", "--cached") if repo.git.diff("--cached") else ""
+        diff_stat_unstaged = repo.git.diff("--stat") if repo.git.diff() else ""
+
+        name_status_staged = repo.git.diff("--name-status", "--cached") if repo.git.diff("--cached") else ""
+        name_status_unstaged = repo.git.diff("--name-status") if repo.git.diff() else ""
+
+        all_files_info = ""
+        if diff_stat_unstaged:
+            all_files_info += ("=== Mudanças não staged ===\n" if language == "pt" else "=== Unstaged changes ===\n")
+            all_files_info += f"{diff_stat_unstaged}\n\n"
+        if diff_stat_staged:
+            all_files_info += ("=== Mudanças staged ===\n" if language == "pt" else "=== Staged changes ===\n")
+            all_files_info += f"{diff_stat_staged}\n\n"
+
+        diff_context = state["diff"][:8000] if len(state["diff"]) > 8000 else state["diff"]
+
+        enhanced_diff = f"""{all_files_info}
+{'=== CONTEXTO DAS MUDANÇAS ===' if language == 'pt' else '=== CHANGES CONTEXT ==='}
+{diff_context}
+"""
+
         agent = LLMProvider.create(state["config"], "split_diff")
-        
+
         prompt = (
-            f"Analise o seguinte diff e agrupe as mudanças em commits lógicos:\n\n{state['diff']}"
+            f"""Analise TODOS os arquivos listados acima e agrupe em commits lógicos.
+
+IMPORTANTE: Você DEVE incluir TODOS os arquivos listados no --stat acima. Não deixe nenhum arquivo de fora!
+
+{enhanced_diff}
+"""
             if language == "pt"
-            else f"Analyze the following diff and group changes into logical commits:\n\n{state['diff']}"
+            else f"""Analyze ALL files listed above and group into logical commits.
+
+IMPORTANT: You MUST include ALL files listed in --stat above. Do not leave any file out!
+
+{enhanced_diff}
+"""
         )
-        
+
         response = await agent.ainvoke({
             "messages": [HumanMessage(content=prompt)],
-            "diff": state["diff"],
-            "commits": [],
+            "diff": enhanced_diff,
         })
         
         content = extract_llm_content(response.content)
         
-        # Tentar extrair JSON da resposta
         groups = extract_json_from_llm_output(content)
         
         if not groups or not isinstance(groups, dict) or "commits" not in groups:
@@ -571,12 +602,37 @@ async def split_diff_node(state: GraphState) -> dict:
             return {"error": ("Não foi possível dividir o diff automaticamente" if language == "pt" else "Could not automatically split the diff")}
         
         commits = groups["commits"]
-        
+
+        all_files_from_git = set()
+        for line in (name_status_staged + "\n" + name_status_unstaged).split("\n"):
+            if line.strip():
+                parts = line.split("\t")
+                if len(parts) >= 2:
+                    all_files_from_git.add(parts[1].strip())
+
+        all_files_in_commits = set()
+        for commit in commits:
+            all_files_in_commits.update(commit.get("files", []))
+
+        missing_files = all_files_from_git - all_files_in_commits
+
+        if missing_files:
+            print(f"\n⚠️  " + ("AVISO: Arquivos não incluídos nos commits:" if language == "pt" else "WARNING: Files not included in commits:"))
+            for f in missing_files:
+                print(f"   - {f}")
+            print("\n" + ("Adicionando arquivos faltantes em commit separado..." if language == "pt" else "Adding missing files in separate commit..."))
+
+            commits.append({
+                "type": "chore",
+                "files": list(missing_files),
+                "description": "include remaining changes"
+            })
+
         print(f"\n✅ " + (f"Identificados {len(commits)} commits lógicos:" if language == "pt" else f"Identified {len(commits)} logical commits:"))
         for i, commit in enumerate(commits, 1):
             files_str = ", ".join(commit.get("files", []))
             print(f"  {i}. {commit.get('type', 'change')}: {files_str}")
-        
+
         return {"split_commits": commits, "messages": state.get("messages", []) + [response]}
     
     except Exception as e:
@@ -603,9 +659,14 @@ async def generate_split_commits_node(state: GraphState) -> dict:
             files = commit_group.get("files", [])
             change_type = commit_group.get("type", "change")
             description = commit_group.get("description", "")
-
-            # Always generate commit messages in English
             prompt = (
+                f"Gere uma mensagem de commit (conventional commits, máx 72 caracteres):\n"
+                f"Tipo: {change_type}\n"
+                f"Arquivos: {', '.join(files)}\n"
+                f"Descrição: {description}\n"
+                f"IMPORTANTE: A mensagem DEVE ser em inglês."
+                if language == "pt"
+                else
                 f"Generate a commit message (conventional commits, max 72 chars) for:\n"
                 f"Type: {change_type}\n"
                 f"Files: {', '.join(files)}\n"
@@ -682,8 +743,6 @@ async def execute_split_commits_node(state: GraphState) -> dict:
                         )
                         print(error_msg)
                         return {"error": error_msg}
-                    elif info.flags & info.UP_TO_DATE:
-                        print("✅ " + ("Branch already up to date" if language == "en" else "Branch já está atualizado"))
                     else:
                         print("✅ " + ("All commits pushed successfully!" if language == "en" else "Todos os commits enviados com sucesso!"))
                 else:

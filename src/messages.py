@@ -291,27 +291,73 @@ class DeepAnalyzeConstructiveSystemPrompt:
         )
 
 
+class RefineCommitMessageSystemPrompt:
+    PT = """Você precisa refinar uma mensagem de commit com base em uma sugestão do usuário.
+
+Mensagem de commit atual:
+{current_message}
+
+Sugestão do usuário:
+{user_suggestion}
+
+Diff original:
+{diff}
+
+IMPORTANTE:
+- Mantenha a mensagem concisa (máximo 72 caracteres)
+- Siga o formato Conventional Commits
+- Incorpore a sugestão do usuário
+- Retorne APENAS a nova mensagem de commit, sem explicações
+
+Nova mensagem de commit:"""
+
+    EN = """You need to refine a commit message based on a user's suggestion.
+
+Current commit message:
+{current_message}
+
+User's suggestion:
+{user_suggestion}
+
+Original diff:
+{diff}
+
+IMPORTANT:
+- Keep the message concise (maximum 72 characters)
+- Follow Conventional Commits format
+- Incorporate the user's suggestion
+- Return ONLY the new commit message, without explanations
+
+New commit message:"""
+
+    @staticmethod
+    def get(language="pt"):
+        return getattr(
+            RefineCommitMessageSystemPrompt, language.upper(), RefineCommitMessageSystemPrompt.PT
+        )
+
+
 class ExecutiveReportSystemPrompt:
     PT = """Você é um especialista em sintetizar discussões técnicas em relatórios executivos acionáveis.
             **Conversa dos analistas:**
             {analysis}
-            
+
             **Diff original do repositório:**
             ```
             {diff}
             ```
-            
+
             **SUA MISSÃO:**
             Sintetizar a discussão completa entre os agentes Crítico e Construtivo em um relatório claro e acionável.
-            
+
             **FORMATO DE RETORNO:**
             Retorne um relatório em markdown seguindo esta estrutura:
-            
+
             ## 🎯 Resumo Executivo
             [Parágrafo breve (2-3 frases) resumindo a discussão e conclusão]
-            
+
             ## 📋 Mudanças Recomendadas
-            
+
             ### 1. [Nome da Mudança]
             **Arquivo:** `caminho/completo/Arquivo.java`
             **Linha:** ~XX
@@ -326,23 +372,23 @@ class ExecutiveReportSystemPrompt:
             ```java
             // código proposto
             ```
-            
+
             ### 2. [Próxima Mudança]
             [Mesmo formato...]
-            
+
             ## ✅ Pontos Fortes Identificados
             - [Lista os aspectos positivos do código]
             - [Mais pontos fortes...]
-            
+
             ## ⚠️ Riscos e Considerações
             - [Riscos identificados durante a discussão]
             - [Considerações importantes...]
-            
+
             ## 📚 Próximos Passos
             1. [Primeiro passo a ser executado]
             2. [Segundo passo...]
             3. [Terceiro passo...]
-            
+
             **REGRAS:**
             - Seja específico: indique arquivo, linha aproximada, e código exato
             - Priorize as mudanças: Alta (segurança/bugs), Média (padrões), Baixa (melhorias)
@@ -353,23 +399,23 @@ class ExecutiveReportSystemPrompt:
     EN = """You are an expert in synthesizing technical discussions into actionable executive reports.
             **Analysts' conversation:**
             {analysis}
-            
+
             **Original repository diff:**
             ```
             {diff}
             ```
-            
+
             **YOUR MISSION:**
             Synthesize the complete discussion between the Critic and Constructive agents into a clear and actionable report.
-            
+
             **RETURN FORMAT:**
             Return a markdown report following this structure:
-            
+
             ## 🎯 Executive Summary
             [Brief paragraph (2-3 sentences) summarizing the discussion and conclusion]
-            
+
             ## 📋 Recommended Changes
-            
+
             ### 1. [Change Name]
             **File:** `full/path/File.java`
             **Line:** ~XX
@@ -384,23 +430,23 @@ class ExecutiveReportSystemPrompt:
             ```java
             // proposed code
             ```
-            
+
             ### 2. [Next Change]
             [Same format...]
-            
+
             ## ✅ Identified Strengths
             - [List positive aspects of the code]
             - [More strengths...]
-            
+
             ## ⚠️ Risks and Considerations
             - [Risks identified during discussion]
             - [Important considerations...]
-            
+
             ## 📚 Next Steps
             1. [First step to be executed]
             2. [Second step...]
             3. [Third step...]
-            
+
             **RULES:**
             - Be specific: indicate file, approximate line, and exact code
             - Prioritize changes: High (security/bugs), Medium (standards), Low (improvements)
@@ -412,4 +458,96 @@ class ExecutiveReportSystemPrompt:
     def get(language="pt"):
         return getattr(
             ExecutiveReportSystemPrompt, language.upper(), ExecutiveReportSystemPrompt.PT
+        )
+
+
+class SplitDiffSystemPrompt:
+    PT = """Você é um especialista em organização de commits Git. Analise o diff e divida as mudanças em commits lógicos.
+            **Diff:**
+            {diff}
+            
+            **SUA TAREFA:**
+            Agrupe as mudanças em commits lógicos baseado em:
+            1. **Coesão funcional**: Mudanças que fazem sentido juntas
+            2. **Tipo de mudança**: features, fixes, docs, refactorings separados
+            3. **Arquivos relacionados**: Arquivos que trabalham juntos
+            
+            **FORMATO DE RETORNO (JSON):**
+            Retorne APENAS um JSON válido no formato:
+            ```json
+            {{
+              "commits": [
+                {{
+                  "type": "feat",
+                  "files": ["src/auth.py", "src/models/user.py"],
+                  "description": "add user authentication"
+                }},
+                {{
+                  "type": "docs",
+                  "files": ["README.md"],
+                  "description": "att documentation for improve clarity"
+                }}
+              ]
+            }}
+            ```
+            
+            **TIPOS DISPONÍVEIS:**
+            feat, fix, docs, style, refactor, perf, test, build, ci, chore
+            
+            **REGRAS:**
+            - Cada commit deve ter um propósito claro
+            - Agrupe arquivos relacionados funcionalmente
+            - Separe features de fixes de documentação
+            - Máximo 5 arquivos por commit (idealmente menos)
+            - Se o diff for pequeno (<3 arquivos), pode ser 1 commit só
+            - A descrição (description) deve ser SEMPRE em inglês
+
+            **IMPORTANTE:** Retorne APENAS o JSON, sem texto adicional."""
+
+    EN = """You are a Git commit organization expert. Analyze the diff and divide changes into logical commits.
+            **Diff:**
+            {diff}
+            
+            **YOUR TASK:**
+            Group changes into logical commits based on:
+            1. **Functional cohesion**: Changes that make sense together
+            2. **Change type**: features, fixes, docs, refactorings separated
+            3. **Related files**: Files that work together
+            
+            **RETURN FORMAT (JSON):**
+            Return ONLY valid JSON in this format:
+            ```json
+            {{
+              "commits": [
+                {{
+                  "type": "feat",
+                  "files": ["src/auth.py", "src/models/user.py"],
+                  "description": "Add user authentication"
+                }},
+                {{
+                  "type": "docs",
+                  "files": ["README.md"],
+                  "description": "Update documentation"
+                }}
+              ]
+            }}
+            ```
+            
+            **AVAILABLE TYPES:**
+            feat, fix, docs, style, refactor, perf, test, build, ci, chore
+            
+            **RULES:**
+            - Each commit should have a clear purpose
+            - Group functionally related files
+            - Separate features from fixes from documentation
+            - Maximum 5 files per commit (ideally fewer)
+            - If diff is small (<3 files), can be 1 commit only
+            - Description must ALWAYS be in English
+
+            **IMPORTANT:** Return ONLY the JSON, no additional text."""
+
+    @staticmethod
+    def get(language="pt"):
+        return getattr(
+            SplitDiffSystemPrompt, language.upper(), SplitDiffSystemPrompt.PT
         )

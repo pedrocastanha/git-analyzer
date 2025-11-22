@@ -6,7 +6,9 @@ from src.messages import (
     GenerateCommitMessageSystemPrompt,
     DeepAnalyzeCriticSystemPrompt,
     DeepAnalyzeConstructiveSystemPrompt,
+    RefineCommitMessageSystemPrompt,
     ExecutiveReportSystemPrompt,
+    SplitDiffSystemPrompt,
 )
 
 
@@ -62,8 +64,23 @@ class PromptManager:
         )
 
     @staticmethod
+    def get_refine_commit_message_prompt(language="pt"):
+        prompt_text = RefineCommitMessageSystemPrompt.get(language)
+        return ChatPromptTemplate.from_template(prompt_text)
+
+    @staticmethod
     def get_executive_report_prompt(language="pt"):
         prompt_text = ExecutiveReportSystemPrompt.get(language)
+        return ChatPromptTemplate.from_messages(
+            [
+                ("system", prompt_text),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
+
+    @staticmethod
+    def get_split_diff_prompt(language="pt"):
+        prompt_text = SplitDiffSystemPrompt.get(language)
         return ChatPromptTemplate.from_messages(
             [
                 ("system", prompt_text),

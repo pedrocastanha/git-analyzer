@@ -27,7 +27,7 @@ class GlobalDebouncedFileWatcher(FileSystemEventHandler):
         'vendor',
     }
 
-    def __init__(self, callback: Callable, debounce_seconds: float = 300.0):
+    def __init__(self, callback: Callable, debounce_seconds: float = 5.0):
         """ Inicializa o watcher.
          Args:
          callback: Função a ser chamada quando arquivo mudar Recebe como parâmetro: file_path (str)
@@ -82,7 +82,12 @@ class GlobalDebouncedFileWatcher(FileSystemEventHandler):
         self.global_timer.daemon = True
         self.global_timer.start()
 
-    def _execute_callback(self, file_path: str):
+    def _execute_callback(self):
+        """Executa o callback após o período de debounce.
+
+        Este método é chamado pelo Timer e não recebe argumentos.
+        Processa todas as mudanças acumuladas em self.modified_files.
+        """
         self.global_timer = None
 
         try:

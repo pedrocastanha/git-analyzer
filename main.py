@@ -4,6 +4,16 @@ import git
 from src.config import ConfigManager
 from src.core.graph import create_graph
 from src.cli.ui import CLI
+from src.cli.non_blocking_input import create_non_blocking_input_with_flag
+
+# Sistema de notificações e sugestões
+from src.watcher.file_watcher import FileWatcherManager
+from src.notifications import (
+    NotificationManager,
+    SuggestionBuilder,
+    InteractiveMenu,
+    ActionExecutor
+)
 
 
 class GitAIAgent:
@@ -16,6 +26,21 @@ class GitAIAgent:
         self.graph = self.workflow.compile()
 
         self.active = True
+
+        self.notification_manager = NotificationManager(app_name="GitCast")
+        self.suggestion_builder = SuggestionBuilder(self.config_manager.config)
+        self.interactive_menu = InteractiveMenu(
+            language=self.config_manager.get("language", "pt")
+        )
+        self.action_executor = ActionExecutor(agent_ref=self)
+
+        self.pending_suggestions = []
+        self._notification_clicked = False
+
+        self.file_watcher = FileWatcherManager(
+            repo_path=self.repo_path,
+            callback=self.auto_analyze_callback
+        )
 
         print(f"GitAIAgent initialized for repository at {self.repo_path}")
         print(f"Provider: {self.config_manager.get('ai_provider')}")
@@ -245,6 +270,108 @@ class GitAIAgent:
             print(f"❌ {error_msg}")
             return {**current_state, "error": error_msg}
 
+    def auto_analyze_callback(self):
+        """
+        Callback do file watcher - análise automática quando detecta mudanças
+        """
+
+        print("\n" + "=" * 80)
+        print("🔄 FILE WATCHER: Mudanças detectadas!")
+        print("=" * 80 + "\n")
+
+        try:
+            repo = git.Repo(self.repo_path)
+
+            diff_staged = repo.git.diff('--cached')
+            diff_unstaged = repo.git.diff()
+
+            full_diff = f"""=== Mudanças staged ===
+            {diff_staged if diff_staged else "(nenhuma)"}
+            
+            === Mudanças não staged ===
+            {diff_unstaged if diff_unstaged else "(nenhuma)"}
+            """
+
+            if not diff_staged and not diff_unstaged:
+                print("ℹ️  Nenhuma mudança detectada.")
+                return
+
+            suggestions = asyncio.run(
+                self.suggestion_builder.build_from_diff(full_diff)
+            )
+
+            if not suggestions:
+                print("\n💡 Nenhuma sugestão gerada.")
+                return
+
+            self.pending_suggestions = suggestions
+
+            language = self.config_manager.get("language", "pt")
+
+            if language == "pt":
+                title = f"💡 GitCast - {len(suggestions)} sugestão(ões)"
+                message = f"A IA analisou suas mudanças!"
+            else:
+                title = f"💡 GitCast - {len(suggestions)} suggestion(s)"
+                message = f"AI analyzed your changes!"
+
+            def on_notification_click():
+                print("\n🖱️  Notificação clicada! Abrindo sugestões...\n")
+                # Agenda execução de show_suggestions no próximo ciclo
+                self._notification_clicked = True
+
+            self.notification_manager.send_with_action(
+                title=title,
+                message=message,
+                on_click_callback=on_notification_click
+            )
+
+            self.interactive_menu.show_pending_suggestions_prompt(
+                count=len(suggestions)
+            )
+
+        except Exception as e:
+            print(f"❌ Erro na análise automática: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def show_suggestions(self):
+        """
+        Exibe sugestões pendentes e permite execução
+        """
+        if not self.pending_suggestions:
+            language = self.config_manager.get("language", "pt")
+            if language == "pt":
+                print("\n💡 Nenhuma sugestão pendente.\n")
+            else:
+                print("\n💡 No pending suggestions.\n")
+            return
+
+        selected_idx = self.interactive_menu.show_suggestions(
+            self.pending_suggestions
+        )
+
+        if selected_idx is None:
+            self.pending_suggestions = []
+            return
+
+        selected_suggestion = self.pending_suggestions[selected_idx]
+
+        success = await self.action_executor.execute(selected_suggestion)
+
+        if success:
+            self.pending_suggestions.pop(selected_idx)
+
+            if self.pending_suggestions:
+                language = self.config_manager.get("language", "pt")
+                if language == "pt":
+                    again = input("\nVer outras sugestões? (s/n): ").strip().lower()
+                else:
+                    again = input("\nView other suggestions? (y/n): ").strip().lower()
+
+                if again in ["s", "sim", "y", "yes"]:
+                    await self.show_suggestions()
+
     async def run(self):
         """Loop principal"""
         if self.config_manager.is_first_run():
@@ -252,9 +379,22 @@ class GitAIAgent:
 
         self.cli.print_welcome()
 
+        print("\n🔍 Iniciando monitoramento automático...")
+        self.file_watcher.start()
+        print("💡 Digite 'suggestions' para ver sugestões da IA\n")
+        print("💡 Ou clique na notificação que aparece após mudanças no código\n")
+
+        non_blocking_input = create_non_blocking_input_with_flag(
+            flag_checker=lambda: self._notification_clicked,
+            flag_command="suggestions"
+        )
+
         while self.active:
             try:
-                command = self.cli.get_command()
+                command = non_blocking_input.get_input("🎯 gitcast> ")
+
+                if self._notification_clicked:
+                    self._notification_clicked = False
 
                 if command == "analyze":
                     await self.analyze_changes()
@@ -264,6 +404,8 @@ class GitAIAgent:
                     await self.commit_and_push()
                 elif command == "split-up":
                     await self.split_commit_and_push()
+                elif command == "suggestions":
+                    await self.show_suggestions()
                 elif command == "mermaid":
                     print(self.graph.get_graph().draw_mermaid())
                 elif command == "config":
@@ -281,6 +423,9 @@ class GitAIAgent:
                 self.active = False
             except Exception as e:
                 print(f"❌ Erro: {e}")
+
+        print("\n🛑 Parando monitoramento...")
+        self.file_watcher.stop()
 
 
 def main():

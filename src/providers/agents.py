@@ -57,3 +57,9 @@ class AgentManager:
         llm_with_tools = llm.bind_tools(tools_analyzer)
         language = config.get("language", "pt")
         return ChainManager.get_split_diff_chain(llm_with_tools, language)
+
+    @staticmethod
+    def get_suggestion_builder_agent(model: str, config: dict):
+        llm = LLMManager.get_llm(model, config)
+        language = config.get("language", "pt")
+        return ChainManager.get_suggestion_builder_chain(llm, language)

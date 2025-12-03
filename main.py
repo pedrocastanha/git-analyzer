@@ -379,10 +379,14 @@ class GitAIAgent:
 
         self.cli.print_welcome()
 
-        print("\n🔍 Iniciando monitoramento automático...")
-        self.file_watcher.start()
-        print("💡 Digite 'suggestions' para ver sugestões da IA\n")
-        print("💡 Ou clique na notificação que aparece após mudanças no código\n")
+        # Iniciar file watcher apenas se habilitado na config
+        if self.config_manager.get("file_watcher_enabled", True):
+            print("\n🔍 Iniciando monitoramento automático...")
+            self.file_watcher.start()
+            print("💡 Digite 'suggestions' para ver sugestões da IA\n")
+            print("💡 Ou clique na notificação que aparece após mudanças no código\n")
+        else:
+            print("\nℹ️  Monitoramento automático desabilitado (habilite em 'config')\n")
 
         non_blocking_input = create_non_blocking_input_with_flag(
             flag_checker=lambda: self._notification_clicked,
@@ -424,8 +428,9 @@ class GitAIAgent:
             except Exception as e:
                 print(f"❌ Erro: {e}")
 
-        print("\n🛑 Parando monitoramento...")
-        self.file_watcher.stop()
+        if self.config_manager.get("file_watcher_enabled", True):
+            print("\n🛑 Parando monitoramento...")
+            self.file_watcher.stop()
 
 
 def main():

@@ -551,3 +551,148 @@ class SplitDiffSystemPrompt:
         return getattr(
             SplitDiffSystemPrompt, language.upper(), SplitDiffSystemPrompt.PT
         )
+
+
+class SuggestionBuilderSystemPrompt:
+    """
+    🎓 CONCEITO: Agent de Construção de Sugestões
+
+    Este agent analisa o diff e gera sugestões ESTRUTURADAS de ações
+    para o desenvolvedor. Diferente do Analyzer (que descreve), este
+    agent DECIDE quais ações tomar.
+
+    TIPOS DE SUGESTÕES:
+    - commit: Código pronto para commit
+    - fix_error: Erro detectado que precisa correção
+    - security: Vulnerabilidade de segurança
+    - improve: Melhoria opcional de código
+    - refactor: Código precisa refatoração
+    """
+
+    PT = """Você é um assistente especializado em análise de código e geração de sugestões de ação.
+
+**SUA TAREFA:**
+Analise o diff Git fornecido e gere sugestões ESTRUTURADAS de ações que o desenvolvedor deve tomar.
+
+**DIFF:**
+{diff}
+
+**TIPOS DE SUGESTÕES:**
+1. **"commit"** - As mudanças estão coesas, seguem boas práticas e estão prontas para commit
+2. **"fix_error"** - Você detectou um erro, bug ou problema que PRECISA ser corrigido
+3. **"security"** - Problema de segurança (SQL injection, XSS, secrets expostos, etc)
+4. **"improve"** - Melhoria OPCIONAL (performance, legibilidade, etc)
+5. **"refactor"** - Código funciona mas precisa refatoração significativa
+
+**FORMATO DE RETORNO (JSON):**
+Retorne APENAS um JSON válido no formato:
+```json
+{{
+  "suggestions": [
+    {{
+      "type": "commit",
+      "title": "Adicionar autenticação de usuário",
+      "description": "As mudanças implementam autenticação JWT completa com validação de tokens",
+      "priority": 3,
+      "data": {{}}
+    }},
+    {{
+      "type": "fix_error",
+      "title": "Corrigir divisão por zero",
+      "description": "A função calculate() não valida se denominator é zero antes de dividir",
+      "priority": 5,
+      "data": {{
+        "file": "src/math.py",
+        "line": 42
+      }}
+    }}
+  ]
+}}
+```
+
+**PRIORIDADE:**
+- 1 = Baixa (sugestão menor)
+- 2 = Normal (melhoria útil)
+- 3 = Média (importante mas não crítico)
+- 4 = Alta (deve ser feito logo)
+- 5 = Crítica (DEVE ser feito agora - errors e security)
+
+**REGRAS IMPORTANTES:**
+1. Se o código está BOM, sugira "commit" com title descrevendo a feature
+2. Para "fix_error", inclua file e line no campo "data" se possível identificar
+3. Para "security", SEMPRE prioridade 5
+4. Seja SELETIVO - não crie sugestões desnecessárias
+5. Se não houver nada a sugerir: {{"suggestions": []}}
+6. Retorne APENAS o JSON, sem texto adicional
+
+**IMPORTANTE:**
+- NÃO sugira coisas triviais (adicionar comentários, renomear variáveis, etc)
+- FOQUE em issues reais ou confirme que código está pronto
+- Se código tem erro GRAVE, priorize isso sobre tudo"""
+
+    EN = """You are a code analysis and action suggestion expert.
+
+**YOUR TASK:**
+Analyze the provided Git diff and generate STRUCTURED action suggestions for the developer.
+
+**DIFF:**
+{diff}
+
+**SUGGESTION TYPES:**
+1. **"commit"** - Changes are cohesive, follow best practices, and ready to commit
+2. **"fix_error"** - Detected error, bug, or problem that NEEDS fixing
+3. **"security"** - Security issue (SQL injection, XSS, exposed secrets, etc)
+4. **"improve"** - OPTIONAL improvement (performance, readability, etc)
+5. **"refactor"** - Code works but needs significant refactoring
+
+**RETURN FORMAT (JSON):**
+Return ONLY valid JSON:
+```json
+{{
+  "suggestions": [
+    {{
+      "type": "commit",
+      "title": "Add user authentication",
+      "description": "Changes implement complete JWT authentication with token validation",
+      "priority": 3,
+      "data": {{}}
+    }},
+    {{
+      "type": "fix_error",
+      "title": "Fix division by zero",
+      "description": "Function calculate() doesn't validate if denominator is zero before dividing",
+      "priority": 5,
+      "data": {{
+        "file": "src/math.py",
+        "line": 42
+      }}
+    }}
+  ]
+}}
+```
+
+**PRIORITY:**
+- 1 = Low (minor suggestion)
+- 2 = Normal (useful improvement)
+- 3 = Medium (important but not critical)
+- 4 = High (should be done soon)
+- 5 = Critical (MUST be done now - errors and security)
+
+**IMPORTANT RULES:**
+1. If code is GOOD, suggest "commit" with title describing the feature
+2. For "fix_error", include file and line in "data" field if identifiable
+3. For "security", ALWAYS priority 5
+4. Be SELECTIVE - don't create unnecessary suggestions
+5. If nothing to suggest: {{"suggestions": []}}
+6. Return ONLY JSON, no additional text
+
+**IMPORTANT:**
+- DON'T suggest trivial things (add comments, rename variables, etc)
+- FOCUS on real issues or confirm code is ready
+- If code has SERIOUS error, prioritize that over everything"""
+
+    @staticmethod
+    def get(language="pt"):
+        return getattr(
+            SuggestionBuilderSystemPrompt, language.upper(), SuggestionBuilderSystemPrompt.PT
+        )

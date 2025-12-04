@@ -74,7 +74,9 @@ class CLI:
         print("3. Escolher modelo (OpenAI/Gemini)")
         print("4. Configurar linguagem de retorno da IA")
         print("5. Toggle monitoramento automático (File Watcher)")
-        print("6. Ver configuração")
+        print("6. Toggle modo silencioso (Quiet Mode)")
+        print("7. Configurar duração das notificações")
+        print("8. Ver configuração")
         print("0. Voltar")
         print("=" * 60)
 
@@ -96,6 +98,12 @@ class CLI:
             self._toggle_file_watcher()
 
         elif choice == "6":
+            self._toggle_quiet_mode()
+
+        elif choice == "7":
+            self._configure_notification_timeout()
+
+        elif choice == "8":
             self._show_current_config()
 
     def _configure_provider(self):
@@ -203,11 +211,75 @@ class CLI:
         print(f"\n🔍 Monitoramento automático: {status}")
         print("ℹ️  Reinicie o gitcast para aplicar a mudança")
 
+    def _toggle_quiet_mode(self):
+        """Toggle do quiet mode"""
+        current = self.config_manager.get("quiet_mode", True)
+        new_value = not current
+
+        self.config_manager.set("quiet_mode", new_value)
+        self.config_manager.save_config()
+
+        status = "✅ HABILITADO" if new_value else "❌ DESABILITADO"
+        print(f"\n🔇 Modo silencioso: {status}")
+        if new_value:
+            print("   Logs do file watcher serão suprimidos")
+        else:
+            print("   Logs detalhados do file watcher serão exibidos")
+        print("ℹ️  Reinicie o gitcast para aplicar a mudança")
+
+    def _configure_notification_timeout(self):
+        """Configurar duração das notificações"""
+        print("\n⏱️  Duração das Notificações")
+        print("=" * 60)
+
+        current = self.config_manager.get("notification_timeout", 3000)
+        print(f"Duração atual: {current}ms ({current/1000:.1f}s)")
+        print("\nPresets:")
+        print("  1. 2 segundos (rápido)")
+        print("  2. 3 segundos (padrão)")
+        print("  3. 5 segundos (longo)")
+        print("  4. 10 segundos (muito longo)")
+        print("  5. Persistente (não desaparece)")
+        print("  6. Customizar (digitar valor)")
+
+        choice = input("\nEscolha: ").strip()
+
+        presets = {
+            "1": 2000,
+            "2": 3000,
+            "3": 5000,
+            "4": 10000,
+            "5": 0,
+        }
+
+        if choice in presets:
+            timeout = presets[choice]
+            self.config_manager.set("notification_timeout", timeout)
+            self.config_manager.save_config()
+            if timeout == 0:
+                print("✅ Notificações configuradas como persistentes")
+            else:
+                print(f"✅ Duração configurada: {timeout}ms ({timeout/1000:.1f}s)")
+            print("ℹ️  Reinicie o gitcast para aplicar a mudança")
+        elif choice == "6":
+            try:
+                custom = int(input("Digite o valor em milissegundos: ").strip())
+                if 0 <= custom <= 30000:
+                    self.config_manager.set("notification_timeout", custom)
+                    self.config_manager.save_config()
+                    print(f"✅ Duração customizada: {custom}ms ({custom/1000:.1f}s)")
+                    print("ℹ️  Reinicie o gitcast para aplicar a mudança")
+                else:
+                    print("❌ Valor deve estar entre 0 e 30000")
+            except ValueError:
+                print("❌ Valor inválido")
+
     def _show_current_config(self):
         """Mostrar configuração atual"""
         print("\n📋 Configuração atual:")
         print("=" * 60)
 
+        # Configurações gerais
         config_display = {
             "Provider de IA": self.config_manager.get("ai_provider"),
             "Modelo OpenAI": self.config_manager.get("openai_model"),
@@ -216,11 +288,20 @@ class CLI:
             "Auto-stage": "✅" if self.config_manager.get("auto_stage") else "❌",
             "Auto-push": "✅" if self.config_manager.get("auto_push") else "❌",
             "File Watcher": "✅" if self.config_manager.get("file_watcher_enabled") else "❌",
+            "Modo Silencioso (Quiet Mode)": "✅" if self.config_manager.get("quiet_mode") else "❌",
             "Diff max size": f"{self.config_manager.get('diff_max_size')} chars",
         }
 
         for key, value in config_display.items():
             print(f"  {key:.<40} {value}")
+
+        # Timeout de notificações
+        timeout = self.config_manager.get("notification_timeout", 3000)
+        if timeout == 0:
+            timeout_str = "Persistente"
+        else:
+            timeout_str = f"{timeout}ms ({timeout/1000:.1f}s)"
+        print(f"  {'Duração das notificações':.<40} {timeout_str}")
 
         # Mostrar API keys (mascaradas)
         print("\n🔑 API Keys:")
@@ -304,6 +385,9 @@ class CLI:
         print("  details   - Detalhes dos comandos")
         print("  config    - Configurações")
         print("  exit      - Sair")
+        print("=" * 60)
+        print("💡 Dica: Digite '/' para ver menu com autocomplete")
+        print("   Use ↑↓ para navegar, Tab/Enter para selecionar")
         print("=" * 60)
 
     def get_command(self):

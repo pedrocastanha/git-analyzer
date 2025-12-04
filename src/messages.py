@@ -563,7 +563,7 @@ class SuggestionBuilderSystemPrompt:
 
     TIPOS DE SUGESTÕES:
     - commit: Código pronto para commit
-    - fix_error: Erro detectado que precisa correção
+    - fix_error: Erro detectado que precisa correção (com código de correção)
     - security: Vulnerabilidade de segurança
     - improve: Melhoria opcional de código
     - refactor: Código precisa refatoração
@@ -603,7 +603,21 @@ Retorne APENAS um JSON válido no formato:
       "priority": 5,
       "data": {{
         "file": "src/math.py",
-        "line": 42
+        "line": 42,
+        "old_code": "result = a / b",
+        "new_code": "result = a / b if b != 0 else 0"
+      }}
+    }},
+    {{
+      "type": "improve",
+      "title": "Otimizar loop de busca",
+      "description": "O loop pode ser substituído por list comprehension para melhor performance",
+      "priority": 2,
+      "data": {{
+        "file": "src/utils.py",
+        "line": 15,
+        "old_code": "result = []\\nfor item in items:\\n    if item.active:\\n        result.append(item)",
+        "new_code": "result = [item for item in items if item.active]"
       }}
     }}
   ]
@@ -619,13 +633,20 @@ Retorne APENAS um JSON válido no formato:
 
 **REGRAS IMPORTANTES:**
 1. Se o código está BOM, sugira "commit" com title descrevendo a feature
-2. Para "fix_error", inclua file e line no campo "data" se possível identificar
+2. Para "fix_error", "improve" e "refactor": SEMPRE inclua:
+   - "file": caminho do arquivo
+   - "line": linha aproximada
+   - "old_code": código EXATO atual que será substituído
+   - "new_code": código corrigido/melhorado
 3. Para "security", SEMPRE prioridade 5
 4. Seja SELETIVO - não crie sugestões desnecessárias
 5. Se não houver nada a sugerir: {{"suggestions": []}}
 6. Retorne APENAS o JSON, sem texto adicional
 
 **IMPORTANTE:**
+- O campo "old_code" deve conter o código EXATO como aparece no arquivo
+- O campo "new_code" deve conter o código corrigido completo
+- Isso permite aplicação automática das correções
 - NÃO sugira coisas triviais (adicionar comentários, renomear variáveis, etc)
 - FOQUE em issues reais ou confirme que código está pronto
 - Se código tem erro GRAVE, priorize isso sobre tudo"""
@@ -664,7 +685,21 @@ Return ONLY valid JSON:
       "priority": 5,
       "data": {{
         "file": "src/math.py",
-        "line": 42
+        "line": 42,
+        "old_code": "result = a / b",
+        "new_code": "result = a / b if b != 0 else 0"
+      }}
+    }},
+    {{
+      "type": "improve",
+      "title": "Optimize search loop",
+      "description": "Loop can be replaced with list comprehension for better performance",
+      "priority": 2,
+      "data": {{
+        "file": "src/utils.py",
+        "line": 15,
+        "old_code": "result = []\\nfor item in items:\\n    if item.active:\\n        result.append(item)",
+        "new_code": "result = [item for item in items if item.active]"
       }}
     }}
   ]
@@ -680,13 +715,20 @@ Return ONLY valid JSON:
 
 **IMPORTANT RULES:**
 1. If code is GOOD, suggest "commit" with title describing the feature
-2. For "fix_error", include file and line in "data" field if identifiable
+2. For "fix_error", "improve" and "refactor": ALWAYS include:
+   - "file": file path
+   - "line": approximate line number
+   - "old_code": EXACT current code to be replaced
+   - "new_code": corrected/improved code
 3. For "security", ALWAYS priority 5
 4. Be SELECTIVE - don't create unnecessary suggestions
 5. If nothing to suggest: {{"suggestions": []}}
 6. Return ONLY JSON, no additional text
 
 **IMPORTANT:**
+- The "old_code" field must contain the EXACT code as it appears in the file
+- The "new_code" field must contain the complete corrected code
+- This allows automatic application of fixes
 - DON'T suggest trivial things (add comments, rename variables, etc)
 - FOCUS on real issues or confirm code is ready
 - If code has SERIOUS error, prioritize that over everything"""

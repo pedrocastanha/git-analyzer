@@ -1,10 +1,12 @@
 import asyncio
 import sys
+import time
 import git
 from src.config import ConfigManager
 from src.core.graph import create_graph
 from src.cli.ui import CLI
-from src.cli.non_blocking_input import create_non_blocking_input_with_flag
+from src.cli.interactive_input import InteractiveInput, DoubleCtrlCExit
+from src.cli.command_completer import GitcastCompleter
 
 # Sistema de notificações e sugestões
 from src.watcher.file_watcher import FileWatcherManager
@@ -27,7 +29,10 @@ class GitAIAgent:
 
         self.active = True
 
-        self.notification_manager = NotificationManager(app_name="GitCast")
+        self.notification_manager = NotificationManager(
+            app_name="GitCast",
+            default_timeout=self.config_manager.get("notification_timeout", 3000)
+        )
         self.suggestion_builder = SuggestionBuilder(self.config_manager.config)
         self.interactive_menu = InteractiveMenu(
             language=self.config_manager.get("language", "pt")
@@ -36,10 +41,16 @@ class GitAIAgent:
 
         self.pending_suggestions = []
         self._notification_clicked = False
+        self._processing_changes = False  # Flag para evitar processamento simultâneo
+
+        # Controle de Ctrl+C duplo para sair
+        self._last_ctrl_c_time = 0
+        self._ctrl_c_timeout = 2.0  # Segundos para considerar "duplo"
 
         self.file_watcher = FileWatcherManager(
             repo_path=self.repo_path,
-            callback=self.auto_analyze_callback
+            callback=self.auto_analyze_callback,
+            quiet_mode=self.config_manager.get("quiet_mode", True)
         )
 
         print(f"GitAIAgent initialized for repository at {self.repo_path}")
@@ -273,35 +284,79 @@ class GitAIAgent:
     def auto_analyze_callback(self):
         """
         Callback do file watcher - análise automática quando detecta mudanças
+        Agenda a análise async sem bloquear
         """
+        # Evitar processamento simultâneo
+        if self._processing_changes:
+            return
 
-        print("\n" + "=" * 80)
-        print("🔄 FILE WATCHER: Mudanças detectadas!")
-        print("=" * 80 + "\n")
+        # Agendar a análise async no event loop
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._async_auto_analyze())
+        except RuntimeError:
+            # Nenhum loop rodando - fallback silencioso
+            if not self.config_manager.get("quiet_mode", True):
+                print("💡 Mudanças detectadas. Digite 'analyze' para ver sugestões.")
+
+    async def _async_auto_analyze(self):
+        """
+        Versão async da análise automática.
+
+        FLUXO:
+        1. Detecta mudanças no repositório
+        2. Gera diff (staged + unstaged)
+        3. Envia para IA analisar
+        4. Cria sugestões estruturadas
+        5. Notifica o usuário
+        """
+        if self._processing_changes:
+            return
+
+        self._processing_changes = True
+        quiet_mode = self.config_manager.get("quiet_mode", True)
 
         try:
+            # Feedback visual de que está analisando
+            print("\n🔄 Mudanças detectadas, analisando...")
+
             repo = git.Repo(self.repo_path)
 
             diff_staged = repo.git.diff('--cached')
             diff_unstaged = repo.git.diff()
 
             full_diff = f"""=== Mudanças staged ===
-            {diff_staged if diff_staged else "(nenhuma)"}
-            
-            === Mudanças não staged ===
-            {diff_unstaged if diff_unstaged else "(nenhuma)"}
-            """
+{diff_staged if diff_staged else "(nenhuma)"}
+
+=== Mudanças não staged ===
+{diff_unstaged if diff_unstaged else "(nenhuma)"}
+"""
 
             if not diff_staged and not diff_unstaged:
-                print("ℹ️  Nenhuma mudança detectada.")
+                print("ℹ️  Nenhuma mudança pendente no repositório.")
                 return
 
-            suggestions = asyncio.run(
-                self.suggestion_builder.build_from_diff(full_diff)
-            )
+            # Mostrar resumo do que foi modificado
+            modified_files = []
+            if diff_unstaged:
+                # Extrair nomes dos arquivos do diff
+                for line in diff_unstaged.split('\n'):
+                    if line.startswith('diff --git'):
+                        parts = line.split(' b/')
+                        if len(parts) > 1:
+                            modified_files.append(parts[1])
+
+            if modified_files and not quiet_mode:
+                print(f"   Arquivos: {', '.join(modified_files[:5])}")
+                if len(modified_files) > 5:
+                    print(f"   ... e mais {len(modified_files) - 5} arquivo(s)")
+
+            # Gerar sugestões usando IA
+            print("🤖 IA analisando código...")
+            suggestions = await self.suggestion_builder.build_from_diff(full_diff)
 
             if not suggestions:
-                print("\n💡 Nenhuma sugestão gerada.")
+                print("✅ Código analisado - nenhum problema encontrado!")
                 return
 
             self.pending_suggestions = suggestions
@@ -317,7 +372,6 @@ class GitAIAgent:
 
             def on_notification_click():
                 print("\n🖱️  Notificação clicada! Abrindo sugestões...\n")
-                # Agenda execução de show_suggestions no próximo ciclo
                 self._notification_clicked = True
 
             self.notification_manager.send_with_action(
@@ -334,6 +388,52 @@ class GitAIAgent:
             print(f"❌ Erro na análise automática: {e}")
             import traceback
             traceback.print_exc()
+        finally:
+            self._processing_changes = False
+
+    def _show_interactive_menu(self):
+        """
+        Mostra menu interativo de comandos (funciona em qualquer ambiente).
+        Retorna o comando selecionado ou None se cancelado.
+        """
+        commands = {
+            "1": ("analyze", "Analisa mudanças no código"),
+            "2": ("danalyze", "Análise profunda com multi-agentes"),
+            "3": ("up", "Commit e push automático"),
+            "4": ("split-up", "Divide diff em commits menores"),
+            "5": ("suggestions", "Mostra sugestões da IA"),
+            "6": ("config", "Menu de configurações"),
+            "7": ("mermaid", "Visualiza grafo do workflow"),
+            "8": ("details", "Detalhes de todos os comandos"),
+            "9": ("exit", "Sair do gitcast"),
+        }
+
+        print("\n" + "=" * 60)
+        print("📋 MENU DE COMANDOS")
+        print("=" * 60)
+
+        for num, (cmd, desc) in commands.items():
+            print(f"  {num}. {cmd:12} - {desc}")
+
+        print("=" * 60)
+        print("Digite o número ou o nome do comando (Enter para cancelar)")
+
+        choice = input("Escolha: ").strip()
+
+        if not choice:
+            return None
+
+        # Se digitou número
+        if choice in commands:
+            return commands[choice][0]
+
+        # Se digitou nome do comando
+        for num, (cmd, desc) in commands.items():
+            if choice.lower() == cmd.lower():
+                return cmd
+
+        print(f"❓ Opção inválida: '{choice}'")
+        return None
 
     async def show_suggestions(self):
         """
@@ -381,24 +481,33 @@ class GitAIAgent:
 
         # Iniciar file watcher apenas se habilitado na config
         if self.config_manager.get("file_watcher_enabled", True):
-            print("\n🔍 Iniciando monitoramento automático...")
+            quiet_mode = self.config_manager.get("quiet_mode", True)
             self.file_watcher.start()
-            print("💡 Digite 'suggestions' para ver sugestões da IA\n")
-            print("💡 Ou clique na notificação que aparece após mudanças no código\n")
+            # Sempre mostra que está monitorando (feedback mínimo)
+            print("\n🔍 Monitoramento automático ativo")
+            print("💡 Mudanças serão analisadas automaticamente\n")
         else:
             print("\nℹ️  Monitoramento automático desabilitado (habilite em 'config')\n")
 
-        non_blocking_input = create_non_blocking_input_with_flag(
-            flag_checker=lambda: self._notification_clicked,
-            flag_command="suggestions"
+        # Criar input interativo com autocomplete
+        completer = GitcastCompleter()
+        interactive_input = InteractiveInput(
+            completer=completer,
+            flag_checker=lambda: "suggestions" if self._notification_clicked else None
         )
 
         while self.active:
             try:
-                command = non_blocking_input.get_input("🎯 gitcast> ")
+                command = await interactive_input.get_input("🎯 gitcast> ")
 
                 if self._notification_clicked:
                     self._notification_clicked = False
+
+                # Menu interativo quando digitar / ou ?
+                if command in ["/", "?"]:
+                    command = self._show_interactive_menu()
+                    if not command:
+                        continue
 
                 if command == "analyze":
                     await self.analyze_changes()
@@ -420,11 +529,18 @@ class GitAIAgent:
                     print("👋 Até logo!")
                     self.active = False
                 elif command:
-                    print(f"❓ Comando desconhecido: '{command}'")
+                    print(f"❓ Comando desconhecido: '{command}' (digite '/' para ver menu)")
 
-            except KeyboardInterrupt:
+            except DoubleCtrlCExit:
+                # Ctrl+C duplo detectado pelo InteractiveInput
                 print("\n\n👋 Até logo!")
                 self.active = False
+
+            except KeyboardInterrupt:
+                # Fallback para KeyboardInterrupt (não deve acontecer com prompt_toolkit)
+                print("\n\n👋 Até logo!")
+                self.active = False
+
             except Exception as e:
                 print(f"❌ Erro: {e}")
 

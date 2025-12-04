@@ -5,16 +5,18 @@ from src.watcher.global_file_watcher import GlobalDebouncedFileWatcher
 
 
 class FileWatcherManager:
-    def __init__(self, repo_path: str, callback: Callable):
+    def __init__(self, repo_path: str, callback: Callable, quiet_mode: bool = False):
         self.repo_path = Path(repo_path)
         self.callback = callback
+        self.quiet_mode = quiet_mode
         self.observer = None
         self.event_handler = None
 
     def start(self):
         self.event_handler = GlobalDebouncedFileWatcher(
             callback=self.callback,
-            debounce_seconds=5.0
+            debounce_seconds=5.0,
+            quiet_mode=self.quiet_mode
         )
 
         self.observer = Observer()
@@ -26,8 +28,9 @@ class FileWatcherManager:
         )
 
         self.observer.start()
-        print(f"Monitorando mudanças em: {self.repo_path}")
-        print(f"Debounce configurado para {self.event_handler.debounce_seconds}s")
+        if not self.quiet_mode:
+            print(f"Monitorando mudanças em: {self.repo_path}")
+            print(f"Debounce configurado para {self.event_handler.debounce_seconds}s")
 
     def stop(self):
         if self.observer:
@@ -36,3 +39,5 @@ class FileWatcherManager:
 
             self.observer.stop()
             self.observer.join()
+            if not self.quiet_mode:
+                print("File watcher parado!")

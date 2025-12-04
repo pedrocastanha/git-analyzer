@@ -1,13 +1,18 @@
-import asyncio
-from typing import Dict, Any
-from .suggestion_builder import Suggestion, SuggestionType
-import git
-import tempfile
-import subprocess
 import os
+from typing import Optional
+from .suggestion_builder import Suggestion, SuggestionType
 
 
 class ActionExecutor:
+    """
+    Executor de ações sugeridas pela IA.
+
+    FUNCIONALIDADES:
+    - Aplica correções de código diretamente nos arquivos
+    - Mostra diff antes/depois para confirmação
+    - Suporta todos os tipos de sugestão
+    """
+
     def __init__(self, agent_ref):
         self.agent = agent_ref
         self.repo_path = agent_ref.repo_path
@@ -15,135 +20,158 @@ class ActionExecutor:
         self.language = self.config.get("language", "pt")
 
     async def execute(self, suggestion: Suggestion) -> bool:
+        """Executa uma sugestão."""
         print("\n" + "=" * 80)
         if self.language == "pt":
-            print(f"Executando: {suggestion.title}")
+            print(f"🔧 Executando: {suggestion.title}")
         else:
-            print(f"Executing: {suggestion.title}")
+            print(f"🔧 Executing: {suggestion.title}")
         print("=" * 80 + "\n")
 
         try:
             if suggestion.type == SuggestionType.COMMIT:
                 return await self._execute_commit(suggestion)
             elif suggestion.type == SuggestionType.FIX_ERROR:
-                return await self._execute_fix(suggestion)
+                return await self._execute_code_change(suggestion, "fix")
             elif suggestion.type == SuggestionType.IMPROVE:
-                return await self._execute_improvement(suggestion)
+                return await self._execute_code_change(suggestion, "improve")
             elif suggestion.type == SuggestionType.SECURITY:
                 return await self._execute_security_fix(suggestion)
             elif suggestion.type == SuggestionType.REFACTOR:
-                return await self._execute_refactor(suggestion)
+                return await self._execute_code_change(suggestion, "refactor")
             else:
-                print(f"Tipo de acao nao implementado: {suggestion.type}")
+                print(f"Tipo de ação não implementado: {suggestion.type}")
                 return False
         except Exception as e:
-            print(f"Erro ao executar acao: {e}")
+            print(f"❌ Erro ao executar ação: {e}")
             import traceback
             traceback.print_exc()
             return False
 
     async def _execute_commit(self, suggestion: Suggestion) -> bool:
-        print(f"Usando comando 'split-up' existente...")
-        await self.agent.split_commit_and_push()
+        """Executa commit usando o split-up existente."""
+        print("📤 Usando comando 'up' para commit...")
+        await self.agent.commit_and_push()
         return True
 
-    async def _execute_fix(self, suggestion: Suggestion) -> bool:
+    async def _execute_code_change(self, suggestion: Suggestion, change_type: str) -> bool:
+        """
+        Executa uma alteração de código (fix, improve ou refactor).
+
+        FLUXO:
+        1. Verifica se tem old_code e new_code nos dados
+        2. Mostra diff visual (vermelho → verde)
+        3. Pede confirmação
+        4. Aplica a mudança diretamente no arquivo
+        """
         file_path = suggestion.data.get("file")
-        line = suggestion.data.get("line")
-        error_desc = suggestion.data.get("error_description", suggestion.description)
+        old_code = suggestion.data.get("old_code")
+        new_code = suggestion.data.get("new_code")
+        line = suggestion.data.get("line", "?")
 
-        print(f"Gerando correcao para: {error_desc}")
-
-        current_code = ""
-        if file_path and os.path.exists(os.path.join(self.repo_path, file_path)):
-            with open(os.path.join(self.repo_path, file_path), 'r') as f:
-                current_code = f.read()
-
-        from src.providers.llms import LLMManager
-        from src.core.nodes import extract_llm_content
-
-        provider = self.config.get("ai_provider", "gemini")
-        llm = LLMManager.get_llm(provider, self.config)
-
-        prompt = f"""Voce e um assistente especializado em corrigir codigo.
-
-ERRO DETECTADO:
-{error_desc}
-
-ARQUIVO: {file_path if file_path else 'nao especificado'}
-LINHA: {line if line else 'nao especificada'}
-
-CODIGO ATUAL:
-```
-{current_code[:2000] if current_code else 'Nao disponivel'}
-```
-
-Por favor, gere um patch (unified diff format) para corrigir este erro.
-Retorne APENAS o patch, sem explicacoes.
-"""
-
-        chain = llm | (lambda x: x)
-        response = await chain.ainvoke(prompt)
-        fix_patch = extract_llm_content(response.content) if hasattr(response, 'content') else str(response)
-
-        print(f"\nPatch gerado:")
-        print(fix_patch[:500] + "..." if len(fix_patch) > 500 else fix_patch)
-
-        if self.language == "pt":
-            confirm = input("\nAplicar este patch? (s/n): ").strip().lower()
-        else:
-            confirm = input("\nApply this patch? (y/n): ").strip().lower()
-
-        if confirm not in ["s", "sim", "y", "yes"]:
-            print("Operacao cancelada")
+        # Se não tem os códigos, mostra apenas a sugestão
+        if not file_path or not old_code or not new_code:
+            print(f"📝 Sugestão de {change_type}:")
+            print(f"   {suggestion.description}")
+            if file_path:
+                print(f"   Arquivo: {file_path}:{line}")
+            print("\n⚠️  Aplicação manual necessária (dados insuficientes para auto-aplicar)")
             return False
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.patch', delete=False) as f:
-            f.write(fix_patch)
-            patch_path = f.name
+        full_path = os.path.join(self.repo_path, file_path)
 
-        try:
-            result = subprocess.run(
-                ["git", "apply", patch_path],
-                cwd=self.repo_path,
-                capture_output=True,
-                text=True
-            )
+        # Verificar se arquivo existe
+        if not os.path.exists(full_path):
+            print(f"❌ Arquivo não encontrado: {file_path}")
+            return False
 
-            if result.returncode == 0:
-                print("Correcao aplicada com sucesso!")
-                return True
+        # Ler conteúdo atual
+        with open(full_path, 'r', encoding='utf-8') as f:
+            current_content = f.read()
+
+        # Verificar se old_code existe no arquivo
+        if old_code not in current_content:
+            print(f"⚠️  Código original não encontrado no arquivo.")
+            print(f"   Procurando: {old_code[:100]}...")
+            print("\n💡 O código pode ter sido modificado. Verifique manualmente.")
+            return False
+
+        # Mostrar diff visual
+        self._show_visual_diff(file_path, line, old_code, new_code)
+
+        # Pedir confirmação
+        if self.language == "pt":
+            confirm = input("\n✅ Aplicar esta alteração? (s/n): ").strip().lower()
+        else:
+            confirm = input("\n✅ Apply this change? (y/n): ").strip().lower()
+
+        if confirm not in ["s", "sim", "y", "yes"]:
+            if self.language == "pt":
+                print("❌ Operação cancelada.")
             else:
-                print(f"Erro ao aplicar patch: {result.stderr}")
-                return False
-        finally:
-            os.unlink(patch_path)
+                print("❌ Operation cancelled.")
+            return False
 
-    async def _execute_improvement(self, suggestion: Suggestion) -> bool:
-        improvement_desc = suggestion.data.get("improvement_description", suggestion.description)
-        print(f"Aplicando melhoria: {improvement_desc}")
-        print("Melhorias devem ser aplicadas manualmente por enquanto.")
-        print(f"   Sugestao: {improvement_desc}")
-        return False
+        # Aplicar a mudança
+        new_content = current_content.replace(old_code, new_code, 1)
+
+        with open(full_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+
+        if self.language == "pt":
+            print(f"✅ Alteração aplicada em {file_path}")
+        else:
+            print(f"✅ Change applied to {file_path}")
+
+        return True
+
+    def _show_visual_diff(self, file_path: str, line: any, old_code: str, new_code: str):
+        """
+        Mostra um diff visual colorido.
+
+        CORES:
+        - Vermelho: código a ser removido
+        - Verde: código a ser adicionado
+        """
+        RED = "\033[91m"
+        GREEN = "\033[92m"
+        YELLOW = "\033[93m"
+        CYAN = "\033[96m"
+        RESET = "\033[0m"
+        DIM = "\033[2m"
+
+        print(f"\n{CYAN}📄 Arquivo: {file_path}:{line}{RESET}")
+        print(f"{DIM}{'─' * 60}{RESET}")
+
+        # Mostrar código antigo (vermelho)
+        print(f"\n{RED}━━━ REMOVER ━━━{RESET}")
+        for line_text in old_code.split('\n'):
+            print(f"{RED}- {line_text}{RESET}")
+
+        # Mostrar código novo (verde)
+        print(f"\n{GREEN}━━━ ADICIONAR ━━━{RESET}")
+        for line_text in new_code.split('\n'):
+            print(f"{GREEN}+ {line_text}{RESET}")
+
+        print(f"\n{DIM}{'─' * 60}{RESET}")
 
     async def _execute_security_fix(self, suggestion: Suggestion) -> bool:
-        security_desc = suggestion.data.get("security_description", suggestion.description)
-        print(f"ALERTA DE SEGURANCA: {security_desc}")
-        print("\nEsta e uma correcao de seguranca critica!")
+        """Executa correção de segurança (com aviso extra)."""
+        RED = "\033[91m"
+        YELLOW = "\033[93m"
+        RESET = "\033[0m"
+
+        print(f"{RED}🔒 ALERTA DE SEGURANÇA{RESET}")
+        print(f"{YELLOW}   {suggestion.description}{RESET}")
+        print("\n⚠️  Esta é uma correção de segurança crítica!")
 
         if self.language == "pt":
-            confirm = input("\nDeseja gerar e aplicar correcao? (s/n): ").strip().lower()
+            confirm = input("\nDeseja aplicar a correção de segurança? (s/n): ").strip().lower()
         else:
-            confirm = input("\nGenerate and apply fix? (y/n): ").strip().lower()
+            confirm = input("\nApply security fix? (y/n): ").strip().lower()
 
         if confirm not in ["s", "sim", "y", "yes"]:
-            print("Operacao cancelada")
+            print("❌ Operação cancelada")
             return False
 
-        return await self._execute_fix(suggestion)
-
-    async def _execute_refactor(self, suggestion: Suggestion) -> bool:
-        refactor_desc = suggestion.data.get("refactor_description", suggestion.description)
-        print(f"Refatoracao: {refactor_desc}")
-        print("Refatoracoes devem ser aplicadas manualmente por enquanto.")
-        return False
+        return await self._execute_code_change(suggestion, "security")

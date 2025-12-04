@@ -7,17 +7,20 @@ from pathlib import Path
 
 
 class NotificationManager:
-    def __init__(self, app_name: str = "GitCast"):
+    def __init__(self, app_name: str = "GitCast", default_timeout: int = 3000):
         self.app_name = app_name
         self.system = platform.system()
         self.on_click_callback = None
+        self.default_timeout = default_timeout
 
     def send(self,
              title: str,
              message: str,
-            timeout: int = 10,
+            timeout: int = None,
             urgency: str = "normal"
     ) -> bool:
+        if timeout is None:
+            timeout = self.default_timeout
         try:
             if self.system == "Linux":
                 return self._send_linux(title, message, timeout, urgency)
@@ -112,18 +115,23 @@ class NotificationManager:
             self,
             title: str,
             message: str,
-            on_click_callback=None
+            on_click_callback=None,
+            timeout: int = None
     ):
         self.on_click_callback = on_click_callback
 
+        # Usa timeout configurado se não especificado
+        if timeout is None:
+            timeout = self.default_timeout
+
         if self.system == "Linux":
-            self._send_linux_with_action(title, message)
+            self._send_linux_with_action(title, message, timeout)
         else:
             self.send(
                 title=title,
                 message=f"{message}\n\n💡 Digite 'suggestions' no terminal",
-                timeout=0,
-                urgency="critical"
+                timeout=timeout,
+                urgency="normal"  # Mudou de critical para normal
             )
 
         print("\n" + "=" * 80)
@@ -132,8 +140,8 @@ class NotificationManager:
         print(f"   💡 Digite 'suggestions' ou clique na notificação")
         print("=" * 80 + "\n")
 
-    def _send_linux_with_action(self, title: str, message: str):
-        action_result = self._try_notify_with_action(title, message)
+    def _send_linux_with_action(self, title: str, message: str, timeout: int):
+        action_result = self._try_notify_with_action(title, message, timeout)
 
         if action_result:
             return
@@ -143,9 +151,9 @@ class NotificationManager:
         if zenity_result:
             return
 
-        self._send_simple_notification(title, message)
+        self._send_simple_notification(title, message, timeout)
 
-    def _try_notify_with_action(self, title: str, message: str) -> bool:
+    def _try_notify_with_action(self, title: str, message: str, timeout: int) -> bool:
         try:
             def send_and_wait():
                 try:
@@ -155,8 +163,9 @@ class NotificationManager:
                             title,
                             message,
                             f"--app-name={self.app_name}",
-                            "--urgency=critical",
+                            "--urgency=normal",  # Mudou de critical para normal
                             "--icon=dialog-information",
+                            f"--expire-time={timeout}",  # ADICIONAR expire time
                             "-A", "show=💡 Ver Sugestões",
                         ],
                         capture_output=True,
@@ -237,17 +246,16 @@ class NotificationManager:
         except Exception:
             return False
 
-    def _send_simple_notification(self, title: str, message: str):
+    def _send_simple_notification(self, title: str, message: str, timeout: int):
         cmd = [
             "notify-send",
             title,
             f"{message}\n\n💡 Digite 'suggestions' no terminal",
             f"--app-name={self.app_name}",
-            "--urgency=critical",
-            "--expire-time=0",
+            "--urgency=normal",  # Mudou de critical para normal
+            f"--expire-time={timeout}",  # Usa timeout configurável
             "--icon=dialog-information",
             "--category=dev.tools",
-            "--hint=int:transient:0",
         ]
 
         subprocess.run(cmd, capture_output=True)

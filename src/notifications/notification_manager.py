@@ -120,7 +120,6 @@ class NotificationManager:
     ):
         self.on_click_callback = on_click_callback
 
-        # Usa timeout configurado se não especificado
         if timeout is None:
             timeout = self.default_timeout
 
@@ -131,7 +130,7 @@ class NotificationManager:
                 title=title,
                 message=f"{message}\n\n💡 Digite 'suggestions' no terminal",
                 timeout=timeout,
-                urgency="normal"  # Mudou de critical para normal
+                urgency="normal"
             )
 
         print("\n" + "=" * 80)
@@ -163,9 +162,9 @@ class NotificationManager:
                             title,
                             message,
                             f"--app-name={self.app_name}",
-                            "--urgency=normal",  # Mudou de critical para normal
+                            "--urgency=normal",
                             "--icon=dialog-information",
-                            f"--expire-time={timeout}",  # ADICIONAR expire time
+                            f"--expire-time={timeout}",
                             "-A", "show=💡 Ver Sugestões",
                         ],
                         capture_output=True,
@@ -252,8 +251,8 @@ class NotificationManager:
             title,
             f"{message}\n\n💡 Digite 'suggestions' no terminal",
             f"--app-name={self.app_name}",
-            "--urgency=normal",  # Mudou de critical para normal
-            f"--expire-time={timeout}",  # Usa timeout configurável
+            "--urgency=normal",
+            f"--expire-time={timeout}",
             "--icon=dialog-information",
             "--category=dev.tools",
         ]

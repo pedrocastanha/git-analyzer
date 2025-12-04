@@ -23,7 +23,7 @@ class Suggestion:
     type: SuggestionType
     title: str
     description: str
-    priority: int  # 1-5
+    priority: int
     data: Dict[str, Any]
     auto_executable: bool = True
 

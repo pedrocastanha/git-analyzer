@@ -1,18 +1,9 @@
 import os
-from typing import Optional
+
 from .suggestion_builder import Suggestion, SuggestionType
 
 
 class ActionExecutor:
-    """
-    Executor de ações sugeridas pela IA.
-
-    FUNCIONALIDADES:
-    - Aplica correções de código diretamente nos arquivos
-    - Mostra diff antes/depois para confirmação
-    - Suporta todos os tipos de sugestão
-    """
-
     def __init__(self, agent_ref):
         self.agent = agent_ref
         self.repo_path = agent_ref.repo_path
@@ -69,7 +60,6 @@ class ActionExecutor:
         new_code = suggestion.data.get("new_code")
         line = suggestion.data.get("line", "?")
 
-        # Se não tem os códigos, mostra apenas a sugestão
         if not file_path or not old_code or not new_code:
             print(f"📝 Sugestão de {change_type}:")
             print(f"   {suggestion.description}")
@@ -80,26 +70,21 @@ class ActionExecutor:
 
         full_path = os.path.join(self.repo_path, file_path)
 
-        # Verificar se arquivo existe
         if not os.path.exists(full_path):
             print(f"❌ Arquivo não encontrado: {file_path}")
             return False
 
-        # Ler conteúdo atual
         with open(full_path, 'r', encoding='utf-8') as f:
             current_content = f.read()
 
-        # Verificar se old_code existe no arquivo
         if old_code not in current_content:
             print(f"⚠️  Código original não encontrado no arquivo.")
             print(f"   Procurando: {old_code[:100]}...")
             print("\n💡 O código pode ter sido modificado. Verifique manualmente.")
             return False
 
-        # Mostrar diff visual
         self._show_visual_diff(file_path, line, old_code, new_code)
 
-        # Pedir confirmação
         if self.language == "pt":
             confirm = input("\n✅ Aplicar esta alteração? (s/n): ").strip().lower()
         else:
@@ -112,7 +97,6 @@ class ActionExecutor:
                 print("❌ Operation cancelled.")
             return False
 
-        # Aplicar a mudança
         new_content = current_content.replace(old_code, new_code, 1)
 
         with open(full_path, 'w', encoding='utf-8') as f:
@@ -126,13 +110,6 @@ class ActionExecutor:
         return True
 
     def _show_visual_diff(self, file_path: str, line: any, old_code: str, new_code: str):
-        """
-        Mostra um diff visual colorido.
-
-        CORES:
-        - Vermelho: código a ser removido
-        - Verde: código a ser adicionado
-        """
         RED = "\033[91m"
         GREEN = "\033[92m"
         YELLOW = "\033[93m"
@@ -143,12 +120,10 @@ class ActionExecutor:
         print(f"\n{CYAN}📄 Arquivo: {file_path}:{line}{RESET}")
         print(f"{DIM}{'─' * 60}{RESET}")
 
-        # Mostrar código antigo (vermelho)
         print(f"\n{RED}━━━ REMOVER ━━━{RESET}")
         for line_text in old_code.split('\n'):
             print(f"{RED}- {line_text}{RESET}")
 
-        # Mostrar código novo (verde)
         print(f"\n{GREEN}━━━ ADICIONAR ━━━{RESET}")
         for line_text in new_code.split('\n'):
             print(f"{GREEN}+ {line_text}{RESET}")
@@ -156,7 +131,6 @@ class ActionExecutor:
         print(f"\n{DIM}{'─' * 60}{RESET}")
 
     async def _execute_security_fix(self, suggestion: Suggestion) -> bool:
-        """Executa correção de segurança (com aviso extra)."""
         RED = "\033[91m"
         YELLOW = "\033[93m"
         RESET = "\033[0m"

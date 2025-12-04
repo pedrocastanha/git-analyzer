@@ -33,6 +33,7 @@ class InteractiveInput:
 
         self._last_ctrl_c_time = 0
         self._ctrl_c_timeout = 2.0
+        self._exit_requested = False
 
         if self.is_tty:
             kb = self._create_key_bindings()
@@ -66,7 +67,9 @@ class InteractiveInput:
             current_time = time.time()
 
             if current_time - input_handler._last_ctrl_c_time < input_handler._ctrl_c_timeout:
-                raise DoubleCtrlCExit()
+                # Sinaliza que queremos sair e fecha o app
+                input_handler._exit_requested = True
+                event.app.exit(result='__EXIT__')
             else:
                 input_handler._last_ctrl_c_time = current_time
                 print("\n⚠️  Pressione Ctrl+C novamente para sair...")
@@ -102,6 +105,12 @@ class InteractiveInput:
         try:
             with patch_stdout():
                 result = await self.session.prompt_async(prompt_text)
+
+                # Verifica se foi solicitado sair via Ctrl+C duplo
+                if result == '__EXIT__' or self._exit_requested:
+                    self._exit_requested = False
+                    raise DoubleCtrlCExit()
+
                 return result.strip()
         except (KeyboardInterrupt, EOFError):
             return None

@@ -71,54 +71,246 @@ class CLI:
         print("=" * 60)
         print("1. Escolher provider de IA")
         print("2. Configurar API keys")
-        print("3. Configurar linguagem de retorno da IA")
-        print("4. Ver configuração")
+        print("3. Escolher modelo (OpenAI/Gemini)")
+        print("4. Configurar linguagem de retorno da IA")
+        print("5. Toggle monitoramento automático (File Watcher)")
+        print("6. Toggle modo silencioso (Quiet Mode)")
+        print("7. Configurar duração das notificações")
+        print("8. Ver configuração")
         print("0. Voltar")
         print("=" * 60)
 
         choice = input("\nEscolha: ").strip()
 
         if choice == "1":
-            print("\nProviders:")
-            print("  1. Gemini")
-            print("  2. OpenAI")
-
-            p = input("\nEscolha: ").strip()
-            providers = {"1": "gemini", "2": "openai"}
-
-            if p in providers:
-                self.config_manager.set("ai_provider", providers[p])
-                self.config_manager.save_config()
-                print(f"✅ Provider: {providers[p]}")
+            self._configure_provider()
 
         elif choice == "2":
-            provider = self.config_manager.get("ai_provider")
-            key_name = f"{provider}_api_key" if provider != "ollama" else "ollama_url"
-
-            if provider != "ollama":
-                key = input(f"{provider.upper()} API Key: ").strip()
-                if key:
-                    self.config_manager.set(key_name, key)
-                    self.config_manager.save_config()
-                    print("✅ API Key configurada!")
+            self._configure_api_key()
 
         elif choice == "3":
-            print("\nLinguagens disponíveis:")
-            print("  1. Português (pt-br)")
-            print("  2. Inglês (en)")
-            lang_choice = input("\nEscolha: ").strip()
-            languages = {"1": "pt", "2": "en"}
-            if lang_choice in languages:
-                self.config_manager.set("language", languages[lang_choice])
-                self.config_manager.save_config()
-                print(f"✅ Linguagem configurada: {languages[lang_choice]}")
+            self._configure_model()
 
         elif choice == "4":
-            print("\n📋 Configuração atual:")
-            for k, v in self.config_manager.config.items():
-                if "api_key" in k and v:
-                    v = v[:8] + "..." + v[-4:]
-                print(f"  {k}: {v}")
+            self._configure_language()
+
+        elif choice == "5":
+            self._toggle_file_watcher()
+
+        elif choice == "6":
+            self._toggle_quiet_mode()
+
+        elif choice == "7":
+            self._configure_notification_timeout()
+
+        elif choice == "8":
+            self._show_current_config()
+
+    def _configure_provider(self):
+        """Configurar provider de IA"""
+        print("\nProviders:")
+        print("  1. Gemini")
+        print("  2. OpenAI")
+
+        p = input("\nEscolha: ").strip()
+        providers = {"1": "gemini", "2": "openai"}
+
+        if p in providers:
+            self.config_manager.set("ai_provider", providers[p])
+            self.config_manager.save_config()
+            print(f"✅ Provider: {providers[p]}")
+
+    def _configure_api_key(self):
+        """Configurar API keys"""
+        provider = self.config_manager.get("ai_provider")
+        key_name = f"{provider}_api_key"
+
+        key = input(f"{provider.upper()} API Key: ").strip()
+        if key:
+            self.config_manager.set(key_name, key)
+            self.config_manager.save_config()
+            print("✅ API Key configurada!")
+
+    def _configure_model(self):
+        """Configurar modelo específico do provider"""
+        provider = self.config_manager.get("ai_provider")
+
+        if provider == "openai":
+            print("\n🤖 Modelos OpenAI disponíveis:")
+            print("=" * 60)
+            models = {
+                "1": ("gpt-4o", "GPT-4o - Mais recente e avançado"),
+                "2": ("gpt-4o-mini", "GPT-4o Mini - Rápido e econômico (padrão)"),
+                "3": ("gpt-4-turbo", "GPT-4 Turbo - Equilibrado"),
+                "4": ("gpt-4", "GPT-4 - Modelo original"),
+                "5": ("gpt-3.5-turbo", "GPT-3.5 Turbo - Mais rápido"),
+            }
+
+            for key, (model_id, description) in models.items():
+                current = " ⭐" if self.config_manager.get("openai_model") == model_id else ""
+                print(f"  {key}. {description}{current}")
+
+            print("=" * 60)
+            choice = input("\nEscolha o modelo: ").strip()
+
+            if choice in models:
+                model_id = models[choice][0]
+                self.config_manager.set("openai_model", model_id)
+                self.config_manager.save_config()
+                print(f"✅ Modelo OpenAI configurado: {model_id}")
+            else:
+                print("❌ Opção inválida")
+
+        elif provider == "gemini":
+            print("\n🤖 Modelos Gemini disponíveis:")
+            print("=" * 60)
+            models = {
+                "1": ("gemini-2.5-flash", "Gemini 2.5 Flash - Ultrarrápido (padrão)"),
+                "2": ("gemini-2.5-pro", "Gemini 2.5 Pro - Máxima qualidade"),
+                "3": ("gemini-2.0-flash-exp", "Gemini 2.0 Flash Experimental"),
+                "4": ("gemini-1.5-pro", "Gemini 1.5 Pro - Estável"),
+                "5": ("gemini-1.5-flash", "Gemini 1.5 Flash - Rápido"),
+            }
+
+            for key, (model_id, description) in models.items():
+                current = " ⭐" if self.config_manager.get("gemini_model") == model_id else ""
+                print(f"  {key}. {description}{current}")
+
+            print("=" * 60)
+            choice = input("\nEscolha o modelo: ").strip()
+
+            if choice in models:
+                model_id = models[choice][0]
+                self.config_manager.set("gemini_model", model_id)
+                self.config_manager.save_config()
+                print(f"✅ Modelo Gemini configurado: {model_id}")
+            else:
+                print("❌ Opção inválida")
+
+    def _configure_language(self):
+        """Configurar linguagem"""
+        print("\nLinguagens disponíveis:")
+        print("  1. Português (pt-br)")
+        print("  2. Inglês (en)")
+        lang_choice = input("\nEscolha: ").strip()
+        languages = {"1": "pt", "2": "en"}
+        if lang_choice in languages:
+            self.config_manager.set("language", languages[lang_choice])
+            self.config_manager.save_config()
+            print(f"✅ Linguagem configurada: {languages[lang_choice]}")
+
+    def _toggle_file_watcher(self):
+        """Toggle do file watcher"""
+        current = self.config_manager.get("file_watcher_enabled", True)
+        new_value = not current
+
+        self.config_manager.set("file_watcher_enabled", new_value)
+        self.config_manager.save_config()
+
+        status = "✅ HABILITADO" if new_value else "❌ DESABILITADO"
+        print(f"\n🔍 Monitoramento automático: {status}")
+        print("ℹ️  Reinicie o gitcast para aplicar a mudança")
+
+    def _toggle_quiet_mode(self):
+        """Toggle do quiet mode"""
+        current = self.config_manager.get("quiet_mode", True)
+        new_value = not current
+
+        self.config_manager.set("quiet_mode", new_value)
+        self.config_manager.save_config()
+
+        status = "✅ HABILITADO" if new_value else "❌ DESABILITADO"
+        print(f"\n🔇 Modo silencioso: {status}")
+        if new_value:
+            print("   Logs do file watcher serão suprimidos")
+        else:
+            print("   Logs detalhados do file watcher serão exibidos")
+        print("ℹ️  Reinicie o gitcast para aplicar a mudança")
+
+    def _configure_notification_timeout(self):
+        """Configurar duração das notificações"""
+        print("\n⏱️  Duração das Notificações")
+        print("=" * 60)
+
+        current = self.config_manager.get("notification_timeout", 3000)
+        print(f"Duração atual: {current}ms ({current/1000:.1f}s)")
+        print("\nPresets:")
+        print("  1. 2 segundos (rápido)")
+        print("  2. 3 segundos (padrão)")
+        print("  3. 5 segundos (longo)")
+        print("  4. 10 segundos (muito longo)")
+        print("  5. Persistente (não desaparece)")
+        print("  6. Customizar (digitar valor)")
+
+        choice = input("\nEscolha: ").strip()
+
+        presets = {
+            "1": 2000,
+            "2": 3000,
+            "3": 5000,
+            "4": 10000,
+            "5": 0,
+        }
+
+        if choice in presets:
+            timeout = presets[choice]
+            self.config_manager.set("notification_timeout", timeout)
+            self.config_manager.save_config()
+            if timeout == 0:
+                print("✅ Notificações configuradas como persistentes")
+            else:
+                print(f"✅ Duração configurada: {timeout}ms ({timeout/1000:.1f}s)")
+            print("ℹ️  Reinicie o gitcast para aplicar a mudança")
+        elif choice == "6":
+            try:
+                custom = int(input("Digite o valor em milissegundos: ").strip())
+                if 0 <= custom <= 30000:
+                    self.config_manager.set("notification_timeout", custom)
+                    self.config_manager.save_config()
+                    print(f"✅ Duração customizada: {custom}ms ({custom/1000:.1f}s)")
+                    print("ℹ️  Reinicie o gitcast para aplicar a mudança")
+                else:
+                    print("❌ Valor deve estar entre 0 e 30000")
+            except ValueError:
+                print("❌ Valor inválido")
+
+    def _show_current_config(self):
+        """Mostrar configuração atual"""
+        print("\n📋 Configuração atual:")
+        print("=" * 60)
+
+        config_display = {
+            "Provider de IA": self.config_manager.get("ai_provider"),
+            "Modelo OpenAI": self.config_manager.get("openai_model"),
+            "Modelo Gemini": self.config_manager.get("gemini_model"),
+            "Linguagem": self.config_manager.get("language"),
+            "Auto-stage": "✅" if self.config_manager.get("auto_stage") else "❌",
+            "Auto-push": "✅" if self.config_manager.get("auto_push") else "❌",
+            "File Watcher": "✅" if self.config_manager.get("file_watcher_enabled") else "❌",
+            "Modo Silencioso (Quiet Mode)": "✅" if self.config_manager.get("quiet_mode") else "❌",
+            "Diff max size": f"{self.config_manager.get('diff_max_size')} chars",
+        }
+
+        for key, value in config_display.items():
+            print(f"  {key:.<40} {value}")
+
+        timeout = self.config_manager.get("notification_timeout", 3000)
+        if timeout == 0:
+            timeout_str = "Persistente"
+        else:
+            timeout_str = f"{timeout}ms ({timeout/1000:.1f}s)"
+        print(f"  {'Duração das notificações':.<40} {timeout_str}")
+
+        print("\n🔑 API Keys:")
+        for key in ["openai_api_key", "gemini_api_key"]:
+            value = self.config_manager.get(key, "")
+            if value:
+                masked = value[:8] + "..." + value[-4:] if len(value) > 12 else "***"
+                print(f"  {key.replace('_api_key', '').upper():.<40} {masked}")
+            else:
+                print(f"  {key.replace('_api_key', '').upper():.<40} ❌ Não configurada")
+
+        print("=" * 60)
 
     def get_details(self):
         """Mostra detalhes dos comandos"""
@@ -190,6 +382,9 @@ class CLI:
         print("  details   - Detalhes dos comandos")
         print("  config    - Configurações")
         print("  exit      - Sair")
+        print("=" * 60)
+        print("💡 Dica: Digite '/' para ver menu com autocomplete")
+        print("   Use ↑↓ para navegar, Tab/Enter para selecionar")
         print("=" * 60)
 
     def get_command(self):

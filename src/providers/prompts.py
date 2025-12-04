@@ -9,6 +9,7 @@ from src.messages import (
     RefineCommitMessageSystemPrompt,
     ExecutiveReportSystemPrompt,
     SplitDiffSystemPrompt,
+    SuggestionBuilderSystemPrompt,
 )
 
 
@@ -87,3 +88,8 @@ class PromptManager:
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
+
+    @staticmethod
+    def get_suggestion_builder_prompt(language="pt"):
+        prompt_text = SuggestionBuilderSystemPrompt.get(language)
+        return ChatPromptTemplate.from_template(prompt_text)

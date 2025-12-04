@@ -279,7 +279,6 @@ class CLI:
         print("\n📋 Configuração atual:")
         print("=" * 60)
 
-        # Configurações gerais
         config_display = {
             "Provider de IA": self.config_manager.get("ai_provider"),
             "Modelo OpenAI": self.config_manager.get("openai_model"),
@@ -295,7 +294,6 @@ class CLI:
         for key, value in config_display.items():
             print(f"  {key:.<40} {value}")
 
-        # Timeout de notificações
         timeout = self.config_manager.get("notification_timeout", 3000)
         if timeout == 0:
             timeout_str = "Persistente"
@@ -303,7 +301,6 @@ class CLI:
             timeout_str = f"{timeout}ms ({timeout/1000:.1f}s)"
         print(f"  {'Duração das notificações':.<40} {timeout_str}")
 
-        # Mostrar API keys (mascaradas)
         print("\n🔑 API Keys:")
         for key in ["openai_api_key", "gemini_api_key"]:
             value = self.config_manager.get(key, "")

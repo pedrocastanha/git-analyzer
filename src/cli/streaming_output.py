@@ -1,20 +1,8 @@
-"""
-Sistema de output com streaming visual.
+import time
 
-Mostra a resposta da IA em tempo real, similar ao Claude Code.
-
-CONCEITO:
-- Streaming permite ver a resposta conforme é gerada
-- Melhora UX pois usuário não fica esperando sem feedback
-- Usa callbacks do LangChain para capturar tokens
-"""
-
-import sys
-from typing import Optional, Callable
 from langchain_core.callbacks import BaseCallbackHandler
 
 
-# Cores ANSI para terminal
 class Colors:
     CYAN = "\033[96m"
     GREEN = "\033[92m"
@@ -30,25 +18,12 @@ class Colors:
 
 
 class StreamingHandler(BaseCallbackHandler):
-    """
-    Callback handler para streaming de tokens da LLM.
-
-    Cada token gerado pela IA é impresso imediatamente,
-    criando efeito de "digitação em tempo real".
-    """
-
     def __init__(
         self,
         color: str = Colors.WHITE,
         prefix: str = "",
         show_thinking: bool = True
     ):
-        """
-        Args:
-            color: Cor ANSI para o texto
-            prefix: Prefixo a mostrar antes do streaming
-            show_thinking: Se True, mostra indicador de "pensando..."
-        """
         self.color = color
         self.prefix = prefix
         self.show_thinking = show_thinking
@@ -56,40 +31,27 @@ class StreamingHandler(BaseCallbackHandler):
         self.started = False
 
     def on_llm_start(self, *args, **kwargs):
-        """Chamado quando LLM começa a gerar."""
         if self.show_thinking:
             print(f"\n{Colors.DIM}🤔 Analisando...{Colors.RESET}", end="", flush=True)
 
     def on_llm_new_token(self, token: str, **kwargs):
-        """Chamado para cada token gerado."""
         if not self.started:
-            # Limpa o "pensando..." e mostra prefixo
             print(f"\r{' ' * 20}\r", end="")  # Limpa linha
             if self.prefix:
                 print(f"{self.prefix}", end="")
             self.started = True
 
-        # Imprime token com cor
         print(f"{self.color}{token}{Colors.RESET}", end="", flush=True)
         self.token_count += 1
 
     def on_llm_end(self, *args, **kwargs):
-        """Chamado quando LLM termina."""
-        print()  # Nova linha no final
+        print()
 
     def on_llm_error(self, error: Exception, **kwargs):
-        """Chamado em caso de erro."""
         print(f"\n{Colors.RED}❌ Erro: {error}{Colors.RESET}")
 
 
 class ProgressIndicator:
-    """
-    Indicador de progresso visual para operações longas.
-
-    Mostra uma barra de progresso ou spinner enquanto
-    a operação está em andamento.
-    """
-
     SPINNERS = {
         "dots": ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
         "bars": ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂"],
@@ -104,25 +66,15 @@ class ProgressIndicator:
         self.running = False
 
     def show_frame(self):
-        """Mostra um frame do spinner."""
         frame = self.frames[self.current_frame % len(self.frames)]
         print(f"\r{Colors.CYAN}{frame}{Colors.RESET} {self.message}...", end="", flush=True)
         self.current_frame += 1
 
     def clear(self):
-        """Limpa a linha do spinner."""
         print(f"\r{' ' * (len(self.message) + 10)}\r", end="", flush=True)
 
 
 def print_section_header(title: str, emoji: str = "📋"):
-    """
-    Imprime um cabeçalho de seção formatado.
-
-    Exemplo:
-    ════════════════════════════════════════
-    📋 TÍTULO DA SEÇÃO
-    ════════════════════════════════════════
-    """
     width = 60
     print()
     print(f"{Colors.CYAN}{'═' * width}{Colors.RESET}")
@@ -132,14 +84,6 @@ def print_section_header(title: str, emoji: str = "📋"):
 
 
 def print_code_block(code: str, language: str = "", title: str = ""):
-    """
-    Imprime um bloco de código formatado.
-
-    Args:
-        code: Código a ser exibido
-        language: Linguagem para syntax highlighting (futuro)
-        title: Título opcional do bloco
-    """
     if title:
         print(f"{Colors.DIM}┌─ {title}{Colors.RESET}")
 
@@ -153,22 +97,15 @@ def print_code_block(code: str, language: str = "", title: str = ""):
 
 
 def print_diff(old_code: str, new_code: str, file_path: str = ""):
-    """
-    Imprime um diff visual entre código antigo e novo.
-
-    Similar ao que o git diff mostra, mas mais legível.
-    """
     if file_path:
         print(f"\n{Colors.CYAN}📄 {file_path}{Colors.RESET}")
 
     print(f"{Colors.DIM}{'─' * 60}{Colors.RESET}")
 
-    # Código removido (vermelho)
     print(f"\n{Colors.RED}{Colors.BOLD}━━━ ANTES ━━━{Colors.RESET}")
     for line in old_code.split('\n'):
         print(f"{Colors.RED}- {line}{Colors.RESET}")
 
-    # Código adicionado (verde)
     print(f"\n{Colors.GREEN}{Colors.BOLD}━━━ DEPOIS ━━━{Colors.RESET}")
     for line in new_code.split('\n'):
         print(f"{Colors.GREEN}+ {line}{Colors.RESET}")
@@ -184,17 +121,6 @@ def print_suggestion_card(
     file_path: str = "",
     line: int = 0
 ):
-    """
-    Imprime um cartão visual de sugestão.
-
-    Layout:
-    ┌────────────────────────────────────────────────────────┐
-    │ 🔧 TÍTULO DA SUGESTÃO                    [PRIORIDADE]  │
-    │ Descrição da sugestão aqui...                          │
-    │ 📄 arquivo.py:42                                       │
-    └────────────────────────────────────────────────────────┘
-    """
-    # Determinar cor baseada na prioridade
     if priority >= 5:
         border_color = Colors.RED
         priority_text = f"{Colors.RED}●●●●●{Colors.RESET}"
@@ -208,7 +134,6 @@ def print_suggestion_card(
         border_color = Colors.GREEN
         priority_text = f"{Colors.GREEN}●●○○○{Colors.RESET}"
 
-    # Emoji por tipo
     type_emojis = {
         "commit": "💾",
         "fix_error": "🔧",
@@ -232,36 +157,15 @@ def print_suggestion_card(
 
 
 def print_analysis_stream(text: str, delay: float = 0.0):
-    """
-    Imprime texto com efeito de streaming (caractere por caractere).
-
-    Args:
-        text: Texto a ser exibido
-        delay: Delay entre caracteres (0 = instantâneo)
-    """
-    import time
-
     for char in text:
         print(f"{Colors.WHITE}{char}{Colors.RESET}", end="", flush=True)
         if delay > 0:
             time.sleep(delay)
 
-    print()  # Nova linha no final
+    print()
 
 def print_error_message(message: str):
-    """
-    Imprime uma mensagem de erro formatada.
-
-    Args:
-        message: Mensagem de erro a ser exibida
-    """
     print(f"\n{Colors.RED}{Colors.BOLD}❌ Erro: {message}{Colors.RESET}\n")
 
 def print_success_message(message: str):
-    """
-    Imprime uma mensagem de sucesso formatada.
-
-    Args:
-        message: Mensagem de sucesso a ser exibida
-    """
     print(f"\n{Colors.GREEN}{Colors.BOLD}✅ Sucesso: {message}{Colors.RESET}\n")

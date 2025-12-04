@@ -41,11 +41,10 @@ class GitAIAgent:
 
         self.pending_suggestions = []
         self._notification_clicked = False
-        self._processing_changes = False  # Flag para evitar processamento simultâneo
+        self._processing_changes = False
 
-        # Controle de Ctrl+C duplo para sair
         self._last_ctrl_c_time = 0
-        self._ctrl_c_timeout = 2.0  # Segundos para considerar "duplo"
+        self._ctrl_c_timeout = 2.0
 
         self.file_watcher = FileWatcherManager(
             repo_path=self.repo_path,
@@ -286,16 +285,13 @@ class GitAIAgent:
         Callback do file watcher - análise automática quando detecta mudanças
         Agenda a análise async sem bloquear
         """
-        # Evitar processamento simultâneo
         if self._processing_changes:
             return
 
-        # Agendar a análise async no event loop
         try:
             loop = asyncio.get_running_loop()
             loop.create_task(self._async_auto_analyze())
         except RuntimeError:
-            # Nenhum loop rodando - fallback silencioso
             if not self.config_manager.get("quiet_mode", True):
                 print("💡 Mudanças detectadas. Digite 'analyze' para ver sugestões.")
 
@@ -317,7 +313,6 @@ class GitAIAgent:
         quiet_mode = self.config_manager.get("quiet_mode", True)
 
         try:
-            # Feedback visual de que está analisando
             print("\n🔄 Mudanças detectadas, analisando...")
 
             repo = git.Repo(self.repo_path)
@@ -336,10 +331,8 @@ class GitAIAgent:
                 print("ℹ️  Nenhuma mudança pendente no repositório.")
                 return
 
-            # Mostrar resumo do que foi modificado
             modified_files = []
             if diff_unstaged:
-                # Extrair nomes dos arquivos do diff
                 for line in diff_unstaged.split('\n'):
                     if line.startswith('diff --git'):
                         parts = line.split(' b/')
@@ -351,7 +344,6 @@ class GitAIAgent:
                 if len(modified_files) > 5:
                     print(f"   ... e mais {len(modified_files) - 5} arquivo(s)")
 
-            # Gerar sugestões usando IA
             print("🤖 IA analisando código...")
             suggestions = await self.suggestion_builder.build_from_diff(full_diff)
 
@@ -423,11 +415,9 @@ class GitAIAgent:
         if not choice:
             return None
 
-        # Se digitou número
         if choice in commands:
             return commands[choice][0]
 
-        # Se digitou nome do comando
         for num, (cmd, desc) in commands.items():
             if choice.lower() == cmd.lower():
                 return cmd
@@ -479,17 +469,14 @@ class GitAIAgent:
 
         self.cli.print_welcome()
 
-        # Iniciar file watcher apenas se habilitado na config
         if self.config_manager.get("file_watcher_enabled", True):
             quiet_mode = self.config_manager.get("quiet_mode", True)
             self.file_watcher.start()
-            # Sempre mostra que está monitorando (feedback mínimo)
             print("\n🔍 Monitoramento automático ativo")
             print("💡 Mudanças serão analisadas automaticamente\n")
         else:
             print("\nℹ️  Monitoramento automático desabilitado (habilite em 'config')\n")
 
-        # Criar input interativo com autocomplete
         completer = GitcastCompleter()
         interactive_input = InteractiveInput(
             completer=completer,
@@ -503,7 +490,6 @@ class GitAIAgent:
                 if self._notification_clicked:
                     self._notification_clicked = False
 
-                # Menu interativo quando digitar / ou ?
                 if command in ["/", "?"]:
                     command = self._show_interactive_menu()
                     if not command:
@@ -532,12 +518,10 @@ class GitAIAgent:
                     print(f"❓ Comando desconhecido: '{command}' (digite '/' para ver menu)")
 
             except DoubleCtrlCExit:
-                # Ctrl+C duplo detectado pelo InteractiveInput
                 print("\n\n👋 Até logo!")
                 self.active = False
 
             except KeyboardInterrupt:
-                # Fallback para KeyboardInterrupt (não deve acontecer com prompt_toolkit)
                 print("\n\n👋 Até logo!")
                 self.active = False
 

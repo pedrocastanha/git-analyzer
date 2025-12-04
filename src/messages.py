@@ -554,21 +554,6 @@ class SplitDiffSystemPrompt:
 
 
 class SuggestionBuilderSystemPrompt:
-    """
-    🎓 CONCEITO: Agent de Construção de Sugestões
-
-    Este agent analisa o diff e gera sugestões ESTRUTURADAS de ações
-    para o desenvolvedor. Diferente do Analyzer (que descreve), este
-    agent DECIDE quais ações tomar.
-
-    TIPOS DE SUGESTÕES:
-    - commit: Código pronto para commit
-    - fix_error: Erro detectado que precisa correção (com código de correção)
-    - security: Vulnerabilidade de segurança
-    - improve: Melhoria opcional de código
-    - refactor: Código precisa refatoração
-    """
-
     PT = """Você é um assistente especializado em análise de código e geração de sugestões de ação.
 
 **SUA TAREFA:**

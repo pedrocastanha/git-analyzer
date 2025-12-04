@@ -58,10 +58,8 @@ class GlobalDebouncedFileWatcher(FileSystemEventHandler):
             level: Nível do log ("info", "debug", "error")
         """
         if level == "error":
-            # Sempre mostra erros
             print(message)
         elif not self.quiet_mode:
-            # Mostra info apenas se não estiver em quiet mode
             if level != "debug":
                 print(message)
 
@@ -93,10 +91,8 @@ class GlobalDebouncedFileWatcher(FileSystemEventHandler):
         if not self.should_process_file(file_path):
             return
 
-        # Sempre mostra feedback visual (mesmo em quiet mode)
         filename = Path(file_path).name
         if not self.modified_files:
-            # Primeira mudança - mostra que detectou
             print(f"\n📝 Arquivo modificado: {filename}")
             print(f"   ⏳ Aguardando {self.debounce_seconds}s para analisar...")
 

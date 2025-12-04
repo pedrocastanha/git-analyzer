@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import time
+import threading
 import git
 from src.config import ConfigManager
 from src.core.graph import create_graph
@@ -45,6 +46,9 @@ class GitAIAgent:
 
         self._last_ctrl_c_time = 0
         self._ctrl_c_timeout = 2.0
+
+        # Referência ao loop asyncio principal (será definido em run())
+        self._main_loop = None
 
         self.file_watcher = FileWatcherManager(
             repo_path=self.repo_path,
@@ -282,18 +286,38 @@ class GitAIAgent:
 
     def auto_analyze_callback(self):
         """
-        Callback do file watcher - análise automática quando detecta mudanças
-        Agenda a análise async sem bloquear
+        Callback do file watcher - análise automática quando detecta mudanças.
+
+        CONCEITO IMPORTANTE - THREAD SAFETY COM ASYNCIO:
+        ================================================
+        O watchdog (file watcher) roda em uma THREAD SEPARADA.
+        O asyncio roda na MAIN THREAD.
+
+        Problema anterior:
+        - asyncio.get_running_loop() falhava porque era chamado
+          de outra thread (a do watchdog), não da main thread.
+
+        Solução:
+        - Guardamos referência ao loop principal em self._main_loop
+        - Usamos call_soon_threadsafe() para agendar de forma segura
+          a criação da task na thread correta.
+
+        É como se você estivesse em outro andar de um prédio (thread do watchdog)
+        e precisasse entregar um pacote no andar principal (main thread).
+        call_soon_threadsafe() é o "elevador seguro" para fazer isso.
         """
         if self._processing_changes:
             return
 
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(self._async_auto_analyze())
-        except RuntimeError:
+        if self._main_loop is None:
             if not self.config_manager.get("quiet_mode", True):
                 print("💡 Mudanças detectadas. Digite 'analyze' para ver sugestões.")
+            return
+
+        # Agenda a task de forma thread-safe no loop principal
+        self._main_loop.call_soon_threadsafe(
+            lambda: self._main_loop.create_task(self._async_auto_analyze())
+        )
 
     async def _async_auto_analyze(self):
         """
@@ -464,6 +488,9 @@ class GitAIAgent:
 
     async def run(self):
         """Loop principal"""
+        # Captura referência ao loop asyncio para uso thread-safe pelo file watcher
+        self._main_loop = asyncio.get_running_loop()
+
         if self.config_manager.is_first_run():
             self.cli.first_time_setup()
 

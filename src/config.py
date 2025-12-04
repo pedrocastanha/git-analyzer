@@ -17,6 +17,9 @@ class ConfigManager:
         "gemini_api_key": "",
         "gemini_model": "gemini-2.5-flash",
         "openai_model": "gpt-4o-mini",
+        "file_watcher_enabled": True,
+        "quiet_mode": True,
+        "notification_timeout": 3000,
     }
 
     def __init__(self, repo_path="."):

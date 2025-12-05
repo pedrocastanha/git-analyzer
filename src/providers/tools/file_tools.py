@@ -18,6 +18,20 @@ def get_full_path(relative_path: str) -> Path:
 
 @tool
 def read_file(file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
+    """
+    Lê o conteúdo de um arquivo do repositório.
+
+    Retorna o conteúdo com números de linha formatados.
+    Pode ler o arquivo inteiro ou apenas um intervalo de linhas.
+
+    Args:
+        file_path: Caminho do arquivo relativo ao repositório
+        start_line: Linha inicial para leitura (opcional, 1-indexed)
+        end_line: Linha final para leitura (opcional, 1-indexed)
+
+    Returns:
+        Conteúdo do arquivo formatado com números de linha
+    """
     full_path = get_full_path(file_path)
 
     if not full_path.exists():

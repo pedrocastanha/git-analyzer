@@ -1,18 +1,19 @@
-# 🤖 gitcast - AI Git Assistant
+# gitcast
 
-Um assistente Git inteligente que usa IA para analisar código, sugerir melhorias e gerar commits automáticos.
+Ferramenta CLI que usa LLMs pra analisar diffs do git, sugerir correções e gerar commits.
 
-## ✨ Features
+## O que faz
 
-- 🔍 **Análise simples** - Sugestões de melhorias manuais formatadas em markdown
-- 🧠 **Análise profunda** - Multi-agent discussion com relatório executivo colorido
-- 📝 **Commits inteligentes** - Mensagens concisas seguindo conventional commits
-- 🎨 **Interface colorida** - Código atual (vermelho) vs sugerido (verde)
-- 🤝 **Multi-provider** - Suporta OpenAI (GPT-4) e Google (Gemini)
+- **analyze** - Olha o diff e sugere melhorias (formatado em markdown)
+- **danalyze** - Dois agentes discutem seu código (um critica, outro defende) e geram um plano
+- **up** - Gera mensagem de commit e faz push
+- **split-up** - Divide diffs grandes em commits menores
+- **file watcher** - Monitora mudanças no repo e analisa automaticamente
+- **notificações** - Avisa quando termina análise (Linux/macOS/Windows)
 
-## 🚀 Instalação
+Funciona com OpenAI e Gemini.
 
-### Método 1: Clone manual (recomendado se curl não funcionar)
+## Instalação
 
 ```bash
 git clone https://github.com/pedrocastanha/git-analyzer.git
@@ -20,196 +21,127 @@ cd git-analyzer
 ./install.sh
 ```
 
-### Pós-instalação
+Se der problema de PATH:
 
-Se `~/.local/bin` não estiver no seu PATH, adicione ao seu shell:
-
-**Bash:**
 ```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
+# bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+
+# zsh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
 
-**Zsh:**
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
+## Como usar
 
-## 🎯 Uso
-
-### Primeira execução
-
-Na primeira vez, você será guiado por um setup interativo:
+Entra no repo e roda:
 
 ```bash
 gitcast
 ```
 
-Você precisará:
-1. Escolher seu provider (OpenAI ou Gemini)
-2. Configurar sua API key
+Na primeira vez vai pedir pra configurar provider e API key.
 
-### Comandos disponíveis
+### Comandos
 
-Entre em qualquer repositório Git e execute:
+| Comando | O que faz |
+|---------|-----------|
+| `analyze` | Análise simples das mudanças |
+| `danalyze` | Análise com dois agentes discutindo |
+| `up` | Commit + push |
+| `split-up` | Divide diff grande em vários commits |
+| `config` | Muda configurações |
+| `mermaid` | Mostra o grafo do workflow |
+| `exit` | Sai |
+| `suggestions` | Mostra última sugestão da IA |
+
+Dica: digita `/` pra abrir menu com autocomplete. Setas pra navegar, Tab/Enter pra selecionar.
+
+### Exemplo básico
 
 ```bash
-gitcast
-```
-
-Comandos dentro do CLI:
-
-- **`analyze`** - Análise simples de mudanças
-- **`danalyze`** - Análise profunda com múltiplos agentes (critic + constructive)
-- **`up`** - Gera commit message e faz push inteligente
-- **`config`** - Altera configurações (provider, API keys, etc)
-- **`mermaid`** - Visualiza o workflow em formato Mermaid
-- **`exit`** - Sair
-
-### Exemplos
-
-**Análise simples:**
-```bash
-# Faça mudanças no código
+# faz suas mudanças
 git add .
 
-# Execute
 gitcast
-> analyze
+> analyze   # vê sugestões
+> up        # commita e pusha
 ```
 
-**Análise profunda (recomendado para mudanças complexas):**
+### Deep analysis
+
 ```bash
 gitcast
 > danalyze
-# Dois agentes discutem o código:
-# 🔴 Crítico (segurança + padrões)
-# 🟢 Construtivo (lógica + performance)
 ```
 
-**Commit automático:**
-```bash
-# Faça mudanças
-git add .
+Dois agentes vão discutir:
+- Um foca em segurança e padrões
+- Outro em lógica e performance
 
-gitcast
-> up
-# Gera mensagem seguindo conventional commits
-# Faz commit e push automaticamente
-```
+Eles vão trocando mensagens até concordarem ou bater o limite. Depois gera um plano consolidado.
 
-## 🔑 Onde conseguir API Keys
+### File watcher
 
-### OpenAI
-1. Crie uma conta em https://platform.openai.com/
-2. Vá em https://platform.openai.com/api-keys
-3. Crie uma nova API key
+O gitcast monitora o repositório automaticamente. Quando você salva um arquivo, ele roda uma análise em background e manda uma notificação quando termina.
 
-### Gemini (Google)
-1. Acesse https://aistudio.google.com/app/apikey
-2. Clique em "Create API Key"
+Pra ver o resultado: digita `suggestions`.
 
-## ⚙️ Configuração
+## API Keys
 
-As configurações ficam em `~/.config/gitcast/config.json`.
+**OpenAI**: https://platform.openai.com/api-keys
 
-### Alterar provider
+**Gemini**: https://aistudio.google.com/app/apikey
 
-```bash
-gitcast
-> config
-> 1  # Escolher provider
-```
+## Configuração
 
-### Alterar API key
-
-```bash
-gitcast
-> config
-> 2  # Configurar API keys
-```
-
-### Configurações disponíveis
+Fica em `~/.config/gitcast/config.json`:
 
 ```json
 {
-  "ai_provider": "gemini",           // "openai" ou "gemini"
-  "auto_stage": true,                // Auto-stage arquivos antes do commit
-  "auto_push": true,                 // Auto-push após commit
-  "diff_max_size": 15000,            // Tamanho máximo do diff (chars)
-  "language": "pt",                  // Idioma dos commits: "pt" ou "en"
+  "ai_provider": "gemini",
+  "auto_stage": true,
+  "auto_push": true,
+  "diff_max_size": 15000,
+  "language": "pt",
   "gemini_model": "gemini-2.5-flash",
   "openai_model": "gpt-4o-mini"
 }
 ```
 
-## 🏗️ Arquitetura
+Ou muda pelo CLI:
 
-O projeto usa **LangGraph** para orquestração de agentes:
-
-- **Nodes**: Etapas do workflow (análise, geração de patch, commit)
-- **Edges**: Lógica de roteamento entre nodes
-- **State**: Estado compartilhado entre nodes
-
-### Deep Analysis (danalyze)
-
-Utiliza dois agentes especializados que discutem o código:
-
-1. **🔴 Crítico** - Foca em segurança e padrões
-2. **🟢 Construtivo** - Foca em lógica e performance
-
-Eles alternam mensagens até:
-- Chegarem a um acordo (AGREEMENT)
-- Atingirem 8 mensagens (limite)
-
-Depois, um terceiro agente sintetiza a discussão em um plano de ação + patch.
-
-## 🛠️ Desenvolvimento
-
-### Estrutura do projeto
-
-```
-git-analyzer/
-├── src/
-│   ├── core/           # LangGraph workflow
-│   │   ├── graph.py    # Definição do grafo
-│   │   ├── nodes.py    # Implementação dos nodes
-│   │   ├── router.py   # Lógica de roteamento
-│   │   └── state.py    # Schema do estado
-│   ├── providers/      # Integração com LLMs
-│   │   ├── agents.py   # Factory de agents
-│   │   ├── chains.py   # LangChain chains
-│   │   ├── llms.py     # Configuração de LLMs
-│   │   └── prompts.py  # Templates de prompts
-│   ├── config.py       # Gerenciamento de config
-│   └── messages.py     # System prompts
-├── main.py             # Entry point CLI
-├── install.sh          # Script de instalação
-└── pyproject.toml      # Dependências
+```bash
+gitcast
+> config
 ```
 
-### Dependências
+## Estrutura
+
+```
+src/
+├── core/           # workflow langgraph
+│   ├── graph.py    # definição do grafo
+│   ├── nodes.py    # implementação dos nodes
+│   ├── router.py   # roteamento
+│   └── state.py    # estado
+├── providers/      # integrações com LLMs
+│   ├── agents.py
+│   ├── chains.py
+│   ├── llms.py
+│   └── prompts.py
+├── config.py
+└── messages.py     # prompts de sistema
+
+main.py             # entry point
+```
+
+## Dependências
 
 - Python 3.9+
-- LangGraph
-- LangChain
-- GitPython
-- OpenAI SDK / Google GenAI SDK
-
-
-## 🤝 Contribuindo
-
-Contributions são bem-vindas! Abra issues ou pull requests.
-
-## 💡 Dicas
-
-- Use `danalyze` para mudanças complexas ou críticas
-- Use `analyze` para mudanças simples do dia-a-dia
-- Configure `auto_push: false` se preferir revisar antes de push
-- O diff é truncado em 15000 chars por padrão (ajustável)
-
+- langgraph
+- langchain
+- gitpython
 
 ---
 
-Feito com ❤️ usando LangGraph
+Usa LangGraph pra orquestrar os agentes.

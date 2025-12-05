@@ -43,11 +43,11 @@ class GitAIAgent:
         self.pending_suggestions = []
         self._notification_clicked = False
         self._processing_changes = False
+        self._interactive_input = None
 
         self._last_ctrl_c_time = 0
         self._ctrl_c_timeout = 2.0
 
-        # Referência ao loop asyncio principal (será definido em run())
         self._main_loop = None
 
         self.file_watcher = FileWatcherManager(
@@ -387,8 +387,11 @@ class GitAIAgent:
                 message = f"AI analyzed your changes!"
 
             def on_notification_click():
-                print("\n🖱️  Notificação clicada! Abrindo sugestões...\n")
+                print("\n🖱️  Notificação clicada! Abrindo sugestões...")
                 self._notification_clicked = True
+                if self._interactive_input:
+                    self._interactive_input.inject_command("suggestions")
+                self.notification_manager._try_focus_terminal()
 
             self.notification_manager.send_with_action(
                 title=title,
@@ -488,7 +491,6 @@ class GitAIAgent:
 
     async def run(self):
         """Loop principal"""
-        # Captura referência ao loop asyncio para uso thread-safe pelo file watcher
         self._main_loop = asyncio.get_running_loop()
 
         if self.config_manager.is_first_run():
@@ -509,6 +511,7 @@ class GitAIAgent:
             completer=completer,
             flag_checker=lambda: "suggestions" if self._notification_clicked else None
         )
+        self._interactive_input = interactive_input
 
         while self.active:
             try:

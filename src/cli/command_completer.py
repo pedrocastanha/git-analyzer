@@ -11,6 +11,7 @@ class GitcastCompleter(Completer):
         "split-up": "Divide diff em commits menores",
         "suggestions": "Mostra sugestões da IA",
         "config": "Menu de configurações",
+        "usage": "Mostra estatísticas de uso",
         "mermaid": "Visualiza grafo do workflow",
         "details": "Detalhes de todos os comandos",
         "exit": "Sair do gitcast"

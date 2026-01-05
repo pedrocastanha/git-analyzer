@@ -67,9 +67,12 @@ class InteractiveInput:
         @kb.add('/')
         def handle_slash(event):
             buffer = event.app.current_buffer
+            was_empty = len(buffer.text) == 0
+
             buffer.insert_text('/')
 
-            buffer.start_completion(select_first=False)
+            if was_empty:
+                buffer.start_completion(select_first=False)
 
         @kb.add('c-c')
         def handle_ctrl_c(event):

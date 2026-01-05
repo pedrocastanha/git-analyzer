@@ -4,6 +4,7 @@ import time
 import threading
 import git
 from src.config import ConfigManager
+from src.usage_tracker import UsageTracker
 from src.core.graph import create_graph
 from src.cli.ui import CLI
 from src.cli.interactive_input import InteractiveInput, DoubleCtrlCExit
@@ -23,6 +24,7 @@ class GitAIAgent:
     def __init__(self, repo_path="."):
         self.repo_path = repo_path
         self.config_manager = ConfigManager(repo_path)
+        self.usage_tracker = UsageTracker()
         self.cli = CLI(self.config_manager)
 
         self.workflow = create_graph()
@@ -161,7 +163,9 @@ class GitAIAgent:
 
             if confirm in ["s", "y", "yes", "sim"]:
                 result["user_confirmation"] = True
-                await self.graph.ainvoke(result)
+                commit_result = await self.graph.ainvoke(result)
+                if not commit_result.get("error"):
+                    self.usage_tracker.increment_commits()
                 break
             elif confirm in ["n", "no", "não", "nao"]:
                 if language == "pt":
@@ -247,10 +251,13 @@ class GitAIAgent:
         
         state["user_confirmation"] = True
         state = {**state, **(await execute_split_commits_node(state))}
-        
+
         if state.get("error"):
             print(f"\n❌ {state['error']}")
         else:
+            num_commits = len(state.get("split_commits", []))
+            if num_commits > 0:
+                self.usage_tracker.increment_commits(num_commits)
             print("\n✅ " + ("Todos os commits foram executados!" if language == "pt" else "All commits executed!"))
 
     async def _refine_commit_message(self, current_state: dict, suggestion: str) -> dict:
@@ -285,27 +292,6 @@ class GitAIAgent:
             return {**current_state, "error": error_msg}
 
     def auto_analyze_callback(self):
-        """
-        Callback do file watcher - análise automática quando detecta mudanças.
-
-        CONCEITO IMPORTANTE - THREAD SAFETY COM ASYNCIO:
-        ================================================
-        O watchdog (file watcher) roda em uma THREAD SEPARADA.
-        O asyncio roda na MAIN THREAD.
-
-        Problema anterior:
-        - asyncio.get_running_loop() falhava porque era chamado
-          de outra thread (a do watchdog), não da main thread.
-
-        Solução:
-        - Guardamos referência ao loop principal em self._main_loop
-        - Usamos call_soon_threadsafe() para agendar de forma segura
-          a criação da task na thread correta.
-
-        É como se você estivesse em outro andar de um prédio (thread do watchdog)
-        e precisasse entregar um pacote no andar principal (main thread).
-        call_soon_threadsafe() é o "elevador seguro" para fazer isso.
-        """
         if self._processing_changes:
             return
 
@@ -314,22 +300,11 @@ class GitAIAgent:
                 print("💡 Mudanças detectadas. Digite 'analyze' para ver sugestões.")
             return
 
-        # Agenda a task de forma thread-safe no loop principal
         self._main_loop.call_soon_threadsafe(
             lambda: self._main_loop.create_task(self._async_auto_analyze())
         )
 
     async def _async_auto_analyze(self):
-        """
-        Versão async da análise automática.
-
-        FLUXO:
-        1. Detecta mudanças no repositório
-        2. Gera diff (staged + unstaged)
-        3. Envia para IA analisar
-        4. Cria sugestões estruturadas
-        5. Notifica o usuário
-        """
         if self._processing_changes:
             return
 
@@ -422,9 +397,10 @@ class GitAIAgent:
             "4": ("split-up", "Divide diff em commits menores"),
             "5": ("suggestions", "Mostra sugestões da IA"),
             "6": ("config", "Menu de configurações"),
-            "7": ("mermaid", "Visualiza grafo do workflow"),
-            "8": ("details", "Detalhes de todos os comandos"),
-            "9": ("exit", "Sair do gitcast"),
+            "7": ("usage", "Mostra estatísticas de uso"),
+            "8": ("mermaid", "Visualiza grafo do workflow"),
+            "9": ("details", "Detalhes de todos os comandos"),
+            "10": ("exit", "Sair do gitcast"),
         }
 
         print("\n" + "=" * 60)
@@ -526,20 +502,31 @@ class GitAIAgent:
                         continue
 
                 if command == "analyze":
+                    self.usage_tracker.increment_command("analyze")
                     await self.analyze_changes()
                 elif command == "danalyze":
+                    self.usage_tracker.increment_command("danalyze")
                     await self.deep_analyze()
                 elif command == "up":
+                    self.usage_tracker.increment_command("up")
                     await self.commit_and_push()
                 elif command == "split-up":
+                    self.usage_tracker.increment_command("split-up")
                     await self.split_commit_and_push()
                 elif command == "suggestions":
+                    self.usage_tracker.increment_command("suggestions")
                     await self.show_suggestions()
                 elif command == "mermaid":
+                    self.usage_tracker.increment_command("mermaid")
                     print(self.graph.get_graph().draw_mermaid())
                 elif command == "config":
+                    self.usage_tracker.increment_command("config")
                     self.cli.configure()
+                elif command == "usage":
+                    self.usage_tracker.increment_command("usage")
+                    print(self.usage_tracker.display_stats())
                 elif command == "details":
+                    self.usage_tracker.increment_command("details")
                     self.cli.get_details()
                 elif command == "exit":
                     print("👋 Até logo!")

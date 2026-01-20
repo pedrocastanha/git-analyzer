@@ -16,7 +16,7 @@ class ConfigManager:
         "openai_api_key": "",
         "gemini_api_key": "",
         "gemini_model": "gemini-2.5-flash",
-        "openai_model": "gpt-4o-mini",
+        "openai_model": "gpt-4.1-mini",
         "file_watcher_enabled": True,
         "quiet_mode": True,
         "notification_timeout": 3000,

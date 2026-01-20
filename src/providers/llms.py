@@ -22,7 +22,7 @@ class LLMManager:
             )
         else:
             return ChatOpenAI(
-                model=config.get("openai_model", "gpt-4o-mini"),
+                model=config.get("openai_model", "gpt-4.1-mini"),
                 temperature=0.5,
                 api_key=config.get("openai_api_key", "") or os.getenv("OPENAI_API_KEY"),
             )

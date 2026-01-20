@@ -15,7 +15,7 @@ class CLI:
         print("=" * 60)
         print("📦 Escolha seu provider de IA:")
         print("=" * 60)
-        print("  1. OpenAI (GPT-4, GPT-4o-mini, GPT-3.5)")
+        print("  1. OpenAI (gpt-4.1-mini)")
         print("  2. Gemini (Google)")
         print("")
 
@@ -140,7 +140,7 @@ class CLI:
             print("=" * 60)
             models = {
                 "1": ("gpt-4o", "GPT-4o - Mais recente e avançado"),
-                "2": ("gpt-4o-mini", "GPT-4o Mini - Rápido e econômico (padrão)"),
+                "2": ("gpt-4.1-mini", "GPT-4o Mini - Rápido e econômico (padrão)"),
                 "3": ("gpt-4-turbo", "GPT-4 Turbo - Equilibrado"),
                 "4": ("gpt-4", "GPT-4 - Modelo original"),
                 "5": ("gpt-3.5-turbo", "GPT-3.5 Turbo - Mais rápido"),
